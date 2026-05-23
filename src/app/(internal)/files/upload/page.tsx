@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import styled from "styled-components";
 import Link from "next/link";
@@ -402,7 +402,7 @@ const FILE_TYPES_BY_ROLE: Record<string, FileType[]> = {
 
 type UploadState = "idle" | "uploading" | "success" | "error";
 
-export default function UploadPage() {
+function UploadPage() {
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -676,5 +676,13 @@ export default function UploadPage() {
         </Card>
       </Layout>
     </>
+  );
+}
+
+export default function UploadPageWrapper() {
+  return (
+    <Suspense>
+      <UploadPage />
+    </Suspense>
   );
 }
