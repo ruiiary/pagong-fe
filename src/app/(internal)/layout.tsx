@@ -1,10 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { Gnb } from "@/components/layout/Gnb";
-import { DevRoleSelector } from "@/components/layout/DevRoleSelector";
-import { getRole } from "@/lib/roleStore";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { getStoredUser } from "@/lib/authStore";
 import { User } from "@/types";
 import { colors, layout } from "@/styles/tokens";
 
@@ -21,17 +20,23 @@ export default function InternalLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const role = getRole();
-    mockHandlers.me(role).then(setUser);
-  }, []);
+    const stored = getStoredUser();
+    if (!stored) {
+      router.replace("/login");
+      return;
+    }
+    setUser(stored);
+  }, [router]);
+
+  if (!user) return null;
 
   return (
     <>
-      <DevRoleSelector />
-      {user && <Gnb userName={user.name} role={user.role} />}
+      <Gnb userName={user.name} role={user.role} />
       <Main>{children}</Main>
     </>
   );

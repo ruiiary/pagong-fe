@@ -1,8 +1,9 @@
 "use client";
 import styled from "styled-components";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { UserRole } from "@/types";
+import { clearUser } from "@/lib/authStore";
 import {
   colors,
   radius,
@@ -89,6 +90,22 @@ const UserName = styled.span`
   color: ${colors.neutral[500]};
 `;
 
+const LogoutButton = styled.button`
+  padding: 4px 12px;
+  background: none;
+  border: 1px solid ${colors.neutral[200]};
+  border-radius: ${radius.pill};
+  font-size: ${fontSize.caption};
+  font-weight: ${fontWeight.medium};
+  color: ${colors.neutral[500]};
+  cursor: pointer;
+  font-family: inherit;
+  &:hover {
+    background: ${colors.neutral[100]};
+    color: ${colors.neutral[700]};
+  }
+`;
+
 const Avatar = styled.div<{ $role: UserRole }>`
   width: 32px;
   height: 32px;
@@ -125,7 +142,13 @@ interface Props {
 
 export function Gnb({ userName, role }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const initial = userName.charAt(0);
+
+  const handleLogout = () => {
+    clearUser();
+    router.replace("/login");
+  };
 
   return (
     <Nav>
@@ -152,6 +175,7 @@ export function Gnb({ userName, role }: Props) {
           {role === "EMPLOYEE" ? "사원" : "팀장·임원"}
         </RoleChip>
         <Avatar $role={role}>{initial}</Avatar>
+        <LogoutButton onClick={handleLogout}>로그아웃</LogoutButton>
       </UserArea>
     </Nav>
   );

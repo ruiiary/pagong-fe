@@ -4,7 +4,7 @@ import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
-import { getRole } from "@/lib/roleStore";
+import { getStoredUser } from "@/lib/authStore";
 import { FileItem, ShareLink, ApiError } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -142,7 +142,8 @@ export default function FileDetailPage({
   const [error, setError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
-  const role = getRole();
+  const currentUser = getStoredUser();
+  const role = currentUser?.role ?? "EMPLOYEE";
 
   const load = () => {
     setLoading(true);
@@ -207,7 +208,8 @@ export default function FileDetailPage({
   if (error) return <ErrorState onRetry={load} />;
   if (!file) return null;
 
-  const canShare = role === "MANAGER_EXECUTIVE";
+  const canShare =
+    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
 
   return (
     <>

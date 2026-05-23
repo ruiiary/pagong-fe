@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
-import { getRole } from "@/lib/roleStore";
+import { getStoredUser } from "@/lib/authStore";
 import { Project, FileItem, ShareLinkDetail, UserRole } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import {
@@ -164,7 +164,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentRole = getRole();
+    const currentRole = getStoredUser()?.role ?? "EMPLOYEE";
     setRole(currentRole);
 
     const requests: Promise<unknown>[] = [

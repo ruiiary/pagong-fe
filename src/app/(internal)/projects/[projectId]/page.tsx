@@ -4,8 +4,8 @@ import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
-import { getRole } from "@/lib/roleStore";
-import { Project, FileItem, FileType, UserRole } from "@/types";
+import { getStoredUser } from "@/lib/authStore";
+import { Project, FileItem, FileType, UserRole, User } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -295,12 +295,17 @@ export default function ProjectDetailPage({
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [role, setRole] = useState<UserRole>("EMPLOYEE");
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
-    setRole(getRole());
+    const u = getStoredUser();
+    if (u) {
+      setCurrentUser(u);
+      setRole(u.role);
+    }
   }, []);
 
   const load = () => {
@@ -338,7 +343,8 @@ export default function ProjectDetailPage({
   if (error) return <ErrorState onRetry={load} />;
   if (!project) return null;
 
-  const canShare = role === "MANAGER_EXECUTIVE";
+  const canShare =
+    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
   const visibleTabs = TABS.filter((t) => t.roles.includes(role));
   const filtered =
     filter === "ALL" ? files : files.filter((f) => f.fileType === filter);

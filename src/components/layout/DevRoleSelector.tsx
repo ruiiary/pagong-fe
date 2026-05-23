@@ -57,7 +57,7 @@ export function DevRoleSelector() {
 
   return (
     <Bar>
-      <Label>🛠 개발용 역할 선택</Label>
+      <Label>개발서버 역할 선택</Label>
       <Select value={role} onChange={handleChange}>
         {ROLES.map((r) => (
           <option key={r.value} value={r.value}>

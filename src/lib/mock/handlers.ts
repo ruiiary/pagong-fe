@@ -13,9 +13,12 @@ import {
 
 const delay = (ms = 400) => new Promise((r) => setTimeout(r, ms));
 
-// 현재 로그인 유저 (role store에서 주입)
 function getCurrentUser(role: UserRole) {
   return MOCK_USERS.find((u) => u.role === role) ?? MOCK_USERS[0];
+}
+
+function getUserByEmail(email: string) {
+  return MOCK_USERS.find((u) => u.email === email) ?? null;
 }
 
 function canAccessFile(fileType: FileType, role: UserRole): boolean {
@@ -25,10 +28,17 @@ function canAccessFile(fileType: FileType, role: UserRole): boolean {
 }
 
 export const mockHandlers = {
-  login: async (role: UserRole) => {
+  login: async (email: string, _password: string) => {
     await delay();
-    const user = getCurrentUser(role);
-    return { token: `mock-token-${role}`, user };
+    const user = getUserByEmail(email);
+    if (!user)
+      throw {
+        status: 401,
+        code: "UNAUTHORIZED",
+        message: "이메일 또는 비밀번호가 올바르지 않습니다.",
+      };
+    const { password: _, ...userWithoutPassword } = user;
+    return { token: `mock-token-${user.id}`, user: userWithoutPassword };
   },
 
   me: async (role: UserRole) => {

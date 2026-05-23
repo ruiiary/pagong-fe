@@ -1,11 +1,26 @@
 import { User, Project, FileItem, ShareLink } from "@/types";
 
-export const MOCK_USERS: User[] = [
-  { id: 1, name: "김사원", email: "employee@brandwave.com", role: "EMPLOYEE" },
+export const MOCK_USERS: (User & { password: string })[] = [
+  {
+    id: 1,
+    name: "김사원",
+    email: "employee@brandwave.com",
+    password: "password1",
+    role: "EMPLOYEE",
+  },
   {
     id: 2,
+    name: "박사원",
+    email: "employee2@brandwave.com",
+    password: "password2",
+    role: "EMPLOYEE",
+    canCreateShareLink: true,
+  },
+  {
+    id: 3,
     name: "이팀장",
     email: "manager@brandwave.com",
+    password: "password3",
     role: "MANAGER_EXECUTIVE",
   },
 ];

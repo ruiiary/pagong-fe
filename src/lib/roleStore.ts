@@ -1,12 +1,16 @@
 import { UserRole } from "@/types";
-
-const KEY = "dev_role";
+import { getStoredUser } from "./authStore";
 
 export function getRole(): UserRole {
   if (typeof window === "undefined") return "EMPLOYEE";
-  return (localStorage.getItem(KEY) as UserRole) ?? "EMPLOYEE";
+  return getStoredUser()?.role ?? "EMPLOYEE";
 }
 
 export function setRole(role: UserRole) {
-  localStorage.setItem(KEY, role);
+  // Legacy — role is now derived from the stored user. This is kept for compatibility.
+  const user = getStoredUser();
+  if (user) {
+    const { storeUser } = require("./authStore");
+    storeUser({ ...user, role });
+  }
 }

@@ -42,9 +42,9 @@ const SummaryChip = styled.div<{ $variant: "active" | "expiring" | "expired" }>`
   font-weight: 600;
   background: ${({ $variant }) =>
     $variant === "active"
-      ? "#dcfce7"
+      ? "#e6fcee"
       : $variant === "expiring"
-        ? "#fef9c3"
+        ? "#f9f6d7"
         : "#f3f4f6"};
   color: ${({ $variant }) =>
     $variant === "active"
