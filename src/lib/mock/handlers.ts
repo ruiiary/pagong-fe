@@ -63,14 +63,16 @@ export const mockHandlers = {
       status: "ACTIVE" as const,
       createdAt: now,
       updatedAt: now,
+      memberIds: [] as number[],
     };
     MOCK_PROJECTS.push(newProject);
     return newProject;
   },
 
-  projects: async () => {
+  projects: async (userId?: number) => {
     await delay();
-    return MOCK_PROJECTS;
+    if (userId === undefined) return MOCK_PROJECTS;
+    return MOCK_PROJECTS.filter((p) => p.memberIds.includes(userId));
   },
 
   project: async (projectId: number) => {
@@ -206,11 +208,23 @@ export const mockHandlers = {
     return { downloadUrl: `https://mock-storage.example.com/shared/${token}` };
   },
 
-  shareLinksAll: async (): Promise<ShareLinkDetail[]> => {
+  shareLinksAll: async (userId?: number): Promise<ShareLinkDetail[]> => {
     await delay(300);
-    return MOCK_SHARE_LINKS.map((link) => {
+    let filtered = MOCK_SHARE_LINKS;
+    if (userId !== undefined) {
+      // employee: only links for projects they are assigned to
+      const assignedProjectIds = MOCK_PROJECTS.filter((p) =>
+        p.memberIds.includes(userId),
+      ).map((p) => p.id);
+      filtered = MOCK_SHARE_LINKS.filter((l) => {
+        const file = MOCK_FILES.find((f) => f.id === l.fileId);
+        return file ? assignedProjectIds.includes(file.projectId) : false;
+      });
+    }
+    return filtered.map((link) => {
       const file = MOCK_FILES.find((f) => f.id === link.fileId)!;
       const project = MOCK_PROJECTS.find((p) => p.id === file.projectId)!;
+      const creator = MOCK_USERS.find((u) => u.id === link.createdById)!;
       return {
         id: link.id,
         fileId: link.fileId,
@@ -218,10 +232,58 @@ export const mockHandlers = {
         expiresAt: link.expiresAt,
         isActive: link.isActive && new Date(link.expiresAt) > new Date(),
         createdAt: link.createdAt,
+        createdById: link.createdById,
+        createdByName: creator?.name ?? "알 수 없음",
         filename: file.originalFilename,
         projectId: project.id,
         projectName: project.name,
       };
     });
+  },
+
+  projectMembers: async (projectId: number) => {
+    await delay(200);
+    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    if (!project)
+      throw {
+        status: 404,
+        code: "NOT_FOUND",
+        message: "프로젝트를 찾을 수 없습니다.",
+      };
+    const employees = MOCK_USERS.filter((u) => u.role === "EMPLOYEE");
+    return {
+      members: employees
+        .filter((u) => project.memberIds.includes(u.id))
+        .map(({ password: _, ...u }) => u),
+      nonMembers: employees
+        .filter((u) => !project.memberIds.includes(u.id))
+        .map(({ password: _, ...u }) => u),
+    };
+  },
+
+  addProjectMember: async (projectId: number, userId: number) => {
+    await delay(300);
+    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    if (!project)
+      throw {
+        status: 404,
+        code: "NOT_FOUND",
+        message: "프로젝트를 찾을 수 없습니다.",
+      };
+    if (!project.memberIds.includes(userId)) project.memberIds.push(userId);
+    return { ok: true };
+  },
+
+  removeProjectMember: async (projectId: number, userId: number) => {
+    await delay(300);
+    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    if (!project)
+      throw {
+        status: 404,
+        code: "NOT_FOUND",
+        message: "프로젝트를 찾을 수 없습니다.",
+      };
+    project.memberIds = project.memberIds.filter((id) => id !== userId);
+    return { ok: true };
   },
 };

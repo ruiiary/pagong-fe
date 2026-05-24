@@ -4,6 +4,7 @@ import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
 import { getStoredUser } from "@/lib/authStore";
+import { MOCK_PROJECTS } from "@/lib/mock/data";
 import { Project, FileItem, ShareLinkDetail, UserRole } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import {
@@ -164,21 +165,29 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentRole = getStoredUser()?.role ?? "EMPLOYEE";
+    const user = getStoredUser();
+    const currentRole = user?.role ?? "EMPLOYEE";
     setRole(currentRole);
 
+    const showLinks =
+      currentRole === "MANAGER_EXECUTIVE" ||
+      (!!user && MOCK_PROJECTS.some((p) => p.memberIds.includes(user.id)));
+
+    const projectUserId =
+      currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
     const requests: Promise<unknown>[] = [
-      mockHandlers.projects(),
+      mockHandlers.projects(projectUserId),
       mockHandlers.projectFiles(1, currentRole),
     ];
-    if (currentRole === "MANAGER_EXECUTIVE") {
-      requests.push(mockHandlers.shareLinksAll());
+    if (showLinks) {
+      const userId = currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
+      requests.push(mockHandlers.shareLinksAll(userId));
     }
 
     Promise.all(requests).then((results) => {
       setProjects((results[0] as Project[]).slice(0, 3));
       setFiles((results[1] as FileItem[]).slice(0, 3));
-      if (currentRole === "MANAGER_EXECUTIVE") {
+      if (showLinks) {
         setShareLinks((results[2] as ShareLinkDetail[]).slice(0, 4));
       }
       setLoading(false);
@@ -188,11 +197,15 @@ export default function DashboardPage() {
   if (loading) return <Loading />;
 
   const isManager = role === "MANAGER_EXECUTIVE";
+  const user = getStoredUser();
+  const showLinks =
+    isManager ||
+    (!!user && MOCK_PROJECTS.some((p) => p.memberIds.includes(user.id)));
 
   return (
     <>
       <PageTitle>대시보드</PageTitle>
-      <Grid $cols={isManager ? 3 : 2}>
+      <Grid $cols={showLinks ? 3 : 2}>
         <Card>
           <CardTitle>최근 업로드 파일</CardTitle>
           {files.map((f) => (
@@ -238,7 +251,7 @@ export default function DashboardPage() {
           <ViewAll href="/projects">전체 보기 →</ViewAll>
         </Card>
 
-        {isManager && (
+        {showLinks && (
           <Card>
             <CardTitle>공유 링크 현황</CardTitle>
             {shareLinks.length === 0 ? (

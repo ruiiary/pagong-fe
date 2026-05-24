@@ -4,6 +4,7 @@ import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
 import { ShareLinkDetail } from "@/types";
+import { getStoredUser } from "@/lib/authStore";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -177,11 +178,16 @@ export default function LinksPage() {
   const [error, setError] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
+  const currentUser = getStoredUser();
+  const isManager = currentUser?.role === "MANAGER_EXECUTIVE";
+
   const load = () => {
     setLoading(true);
     setError(false);
+    // 팀장·임원은 전체 링크, 사원은 배정된 프로젝트 링크만
+    const userId = isManager ? undefined : currentUser?.id;
     mockHandlers
-      .shareLinksAll()
+      .shareLinksAll(userId)
       .then(setLinks)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -207,7 +213,7 @@ export default function LinksPage() {
   return (
     <>
       <Header>
-        <PageTitle>링크 관리</PageTitle>
+        <PageTitle>{isManager ? "링크 관리" : "프로젝트 공유 링크"}</PageTitle>
       </Header>
 
       <SummaryRow>
@@ -240,6 +246,7 @@ export default function LinksPage() {
               <Th>상태</Th>
               <Th>만료 일시</Th>
               <Th>생성 일시</Th>
+              <Th>생성자</Th>
               <Th />
             </tr>
           </thead>
@@ -272,6 +279,7 @@ export default function LinksPage() {
                     </ExpiryText>
                   </Td>
                   <Td>{formatDateTime(link.createdAt)}</Td>
+                  <Td>{link.createdByName}</Td>
                   <Td>
                     {link.isActive &&
                       (copiedId === link.id ? (

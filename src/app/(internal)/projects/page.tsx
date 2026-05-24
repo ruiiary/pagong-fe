@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
+import { getStoredUser } from "@/lib/authStore";
 import { Project } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -65,8 +66,11 @@ export default function ProjectsPage() {
   const load = () => {
     setLoading(true);
     setError(false);
+    const currentUser = getStoredUser();
+    const userId =
+      currentUser?.role === "MANAGER_EXECUTIVE" ? undefined : currentUser?.id;
     mockHandlers
-      .projects()
+      .projects(userId)
       .then(setProjects)
       .catch(() => setError(true))
       .finally(() => setLoading(false));

@@ -208,8 +208,7 @@ export default function FileDetailPage({
   if (error) return <ErrorState onRetry={load} />;
   if (!file) return null;
 
-  const canShare =
-    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
+  const canShare = role === "MANAGER_EXECUTIVE";
 
   return (
     <>

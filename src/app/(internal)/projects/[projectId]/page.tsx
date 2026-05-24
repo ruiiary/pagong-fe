@@ -5,7 +5,13 @@ import styled from "styled-components";
 import Link from "next/link";
 import { mockHandlers } from "@/lib/mock/handlers";
 import { getStoredUser } from "@/lib/authStore";
-import { Project, FileItem, FileType, UserRole, User } from "@/types";
+import {
+  Project,
+  FileItem,
+  FileType,
+  UserRole,
+  User as UserType,
+} from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -268,6 +274,90 @@ const ModalCloseButton = styled.button`
   }
 `;
 
+// ─── Member Management ───────────────────────────────────────────────────────
+
+const MemberSection = styled.div`
+  margin-top: 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+`;
+
+const MemberSectionTitle = styled.h2`
+  font-size: ${fontSize.h3};
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px;
+`;
+
+const MemberList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const MemberChip = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 99px;
+  font-size: ${fontSize.bodySm};
+  color: #1d4ed8;
+  font-weight: 500;
+`;
+
+const RemoveChipButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: none;
+  border: none;
+  color: #93c5fd;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 50%;
+  &:hover {
+    color: #1d4ed8;
+    background: #dbeafe;
+  }
+`;
+
+const AddMemberRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+const AddMemberLabel = styled.span`
+  font-size: ${fontSize.bodySm};
+  color: #6b7280;
+`;
+
+const AddButton = styled.button`
+  padding: 4px 12px;
+  background: none;
+  border: 1px solid #d1d5db;
+  border-radius: 99px;
+  font-size: ${fontSize.bodySm};
+  color: #374151;
+  cursor: pointer;
+  &:hover {
+    background: #f3f4f6;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 type FilterType = "ALL" | FileType;
@@ -295,18 +385,29 @@ export default function ProjectDetailPage({
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [role, setRole] = useState<UserRole>("EMPLOYEE");
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [members, setMembers] = useState<UserType[]>([]);
+  const [nonMembers, setNonMembers] = useState<UserType[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
 
   useEffect(() => {
     const u = getStoredUser();
     if (u) {
       setCurrentUser(u);
       setRole(u.role);
+      if (u.role === "MANAGER_EXECUTIVE") {
+        mockHandlers
+          .projectMembers(Number(projectId))
+          .then(({ members: m, nonMembers: nm }) => {
+            setMembers(m);
+            setNonMembers(nm);
+          });
+      }
     }
-  }, []);
+  }, [projectId]);
 
   const load = () => {
     setLoading(true);
@@ -339,12 +440,33 @@ export default function ProjectDetailPage({
 
   const closeModal = () => setShowShareModal(false);
 
+  const handleAddMember = async (userId: number) => {
+    setMemberLoading(true);
+    await mockHandlers.addProjectMember(Number(projectId), userId);
+    const { members: m, nonMembers: nm } = await mockHandlers.projectMembers(
+      Number(projectId),
+    );
+    setMembers(m);
+    setNonMembers(nm);
+    setMemberLoading(false);
+  };
+
+  const handleRemoveMember = async (userId: number) => {
+    setMemberLoading(true);
+    await mockHandlers.removeProjectMember(Number(projectId), userId);
+    const { members: m, nonMembers: nm } = await mockHandlers.projectMembers(
+      Number(projectId),
+    );
+    setMembers(m);
+    setNonMembers(nm);
+    setMemberLoading(false);
+  };
+
   if (loading) return <Loading />;
   if (error) return <ErrorState onRetry={load} />;
   if (!project) return null;
 
-  const canShare =
-    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
+  const canShare = role === "MANAGER_EXECUTIVE";
   const visibleTabs = TABS.filter((t) => t.roles.includes(role));
   const filtered =
     filter === "ALL" ? files : files.filter((f) => f.fileType === filter);
@@ -480,6 +602,55 @@ export default function ProjectDetailPage({
             <ShareLinkPanel fileId={selectedFile.id} role={role} inline />
           </ModalBox>
         </ModalOverlay>
+      )}
+
+      {canShare && (
+        <MemberSection>
+          <MemberSectionTitle>담당 사원 관리</MemberSectionTitle>
+          <MemberList>
+            {members.length === 0 ? (
+              <AddMemberLabel>배정된 사원이 없습니다.</AddMemberLabel>
+            ) : (
+              members.map((m) => (
+                <MemberChip key={m.id}>
+                  {m.name}
+                  <RemoveChipButton
+                    onClick={() => handleRemoveMember(m.id)}
+                    disabled={memberLoading}
+                    title="배정 해제"
+                  >
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 10 10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    >
+                      <line x1="2" y1="2" x2="8" y2="8" />
+                      <line x1="8" y1="2" x2="2" y2="8" />
+                    </svg>
+                  </RemoveChipButton>
+                </MemberChip>
+              ))
+            )}
+          </MemberList>
+          {nonMembers.length > 0 && (
+            <AddMemberRow>
+              <AddMemberLabel>사원 추가:</AddMemberLabel>
+              {nonMembers.map((u) => (
+                <AddButton
+                  key={u.id}
+                  onClick={() => handleAddMember(u.id)}
+                  disabled={memberLoading}
+                >
+                  + {u.name}
+                </AddButton>
+              ))}
+            </AddMemberRow>
+          )}
+        </MemberSection>
       )}
     </>
   );

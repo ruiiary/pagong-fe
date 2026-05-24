@@ -138,9 +138,10 @@ const RoleChip = styled.span<{ $role: UserRole }>`
 interface Props {
   userName: string;
   role: UserRole;
+  canViewLinks?: boolean;
 }
 
-export function Gnb({ userName, role }: Props) {
+export function Gnb({ userName, role, canViewLinks }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const initial = userName.charAt(0);
@@ -162,7 +163,7 @@ export function Gnb({ userName, role }: Props) {
         <NavLink href="/files/upload" $active={pathname === "/files/upload"}>
           파일 업로드
         </NavLink>
-        {role === "MANAGER_EXECUTIVE" && (
+        {canViewLinks && (
           <NavLink href="/links" $active={pathname.startsWith("/links")}>
             링크 관리
           </NavLink>

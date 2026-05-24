@@ -14,7 +14,6 @@ export const MOCK_USERS: (User & { password: string })[] = [
     email: "employee2@brandwave.com",
     password: "password2",
     role: "EMPLOYEE",
-    canCreateShareLink: true,
   },
   {
     id: 3,
@@ -34,6 +33,7 @@ export const MOCK_PROJECTS: Project[] = [
     status: "ACTIVE",
     createdAt: "2026-04-01T09:00:00Z",
     updatedAt: "2026-05-19T14:32:00Z",
+    memberIds: [2],
   },
   {
     id: 2,
@@ -43,6 +43,7 @@ export const MOCK_PROJECTS: Project[] = [
     status: "ACTIVE",
     createdAt: "2026-04-15T10:00:00Z",
     updatedAt: "2026-05-18T10:00:00Z",
+    memberIds: [1],
   },
   {
     id: 3,
@@ -52,6 +53,7 @@ export const MOCK_PROJECTS: Project[] = [
     status: "ACTIVE",
     createdAt: "2026-05-01T09:00:00Z",
     updatedAt: "2026-05-16T09:15:00Z",
+    memberIds: [],
   },
 ];
 
@@ -107,19 +109,21 @@ export const MOCK_SHARE_LINKS: ShareLink[] = [
     id: 1,
     fileId: 2,
     token: "abc123def456",
-    expiresAt: "2026-05-25T23:59:59Z",
+    expiresAt: "2026-05-30T23:59:59Z",
     isActive: true,
     allowDownload: true,
     createdAt: "2026-05-19T10:00:00Z",
+    createdById: 3,
   },
   {
     id: 2,
     fileId: 1,
     token: "xyz789ghi000",
-    expiresAt: "2026-05-24T23:59:59Z",
+    expiresAt: "2026-05-28T23:59:59Z",
     isActive: true,
     allowDownload: true,
     createdAt: "2026-05-20T09:00:00Z",
+    createdById: 3,
   },
   {
     id: 3,
@@ -129,5 +133,6 @@ export const MOCK_SHARE_LINKS: ShareLink[] = [
     isActive: false,
     allowDownload: true,
     createdAt: "2026-05-07T14:00:00Z",
+    createdById: 3,
   },
 ];

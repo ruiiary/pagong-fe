@@ -7,7 +7,6 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  canCreateShareLink?: boolean;
 }
 
 // ─── Project ─────────────────────────────────────────────────────────────────
@@ -22,6 +21,7 @@ export interface Project {
   status: ProjectStatus;
   createdAt: string;
   updatedAt: string;
+  memberIds: number[];
 }
 
 export interface CreateProjectInput {
@@ -55,6 +55,8 @@ export interface ShareLinkDetail {
   expiresAt: string;
   isActive: boolean;
   createdAt: string;
+  createdById: number;
+  createdByName: string;
   filename: string;
   projectId: number;
   projectName: string;
@@ -68,6 +70,7 @@ export interface ShareLink {
   isActive: boolean;
   allowDownload: boolean;
   createdAt: string;
+  createdById: number;
 }
 
 export interface SharedFileInfo {
