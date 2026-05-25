@@ -1,35 +1,29 @@
-import { ApiError } from "@/types";
+import axios from "axios";
+import { getStoredToken } from "@/lib/authStore";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+export const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  headers: { "Content-Type": "application/json" },
+});
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+apiClient.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const error: ApiError = {
-      status: res.status,
-      code: body.code ?? "SERVER_ERROR",
-      message: body.message ?? "오류가 발생했습니다.",
-    };
-    throw error;
-  }
-
-  return res.json();
-}
-
-export const apiClient = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
-};
+// FastAPI의 422 Validation Error 및 공통 에러 정규화
+apiClient.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status: number = error.response?.status ?? 0;
+    const detail = error.response?.data?.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? (detail as { msg: string }[]).map((d) => d.msg).join(", ")
+          : "요청 처리 중 오류가 발생했습니다.";
+    return Promise.reject({ status, message });
+  },
+);

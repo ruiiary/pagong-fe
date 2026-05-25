@@ -63,7 +63,7 @@ export const mockHandlers = {
       status: "ACTIVE" as const,
       createdAt: now,
       updatedAt: now,
-      memberIds: [] as number[],
+      memberIds: input.members ?? [],
     };
     MOCK_PROJECTS.push(newProject);
     return newProject;
@@ -87,11 +87,48 @@ export const mockHandlers = {
     return project;
   },
 
-  projectFiles: async (projectId: number, role: UserRole) => {
+  projectFiles: async (
+    projectId: number,
+    role: UserRole,
+    fileType?: string | null,
+  ) => {
     await delay();
     return MOCK_FILES.filter(
-      (f) => f.projectId === projectId && canAccessFile(f.fileType, role),
+      (f) =>
+        f.projectId === projectId &&
+        canAccessFile(f.fileType, role) &&
+        (fileType ? f.fileType === fileType : true),
     );
+  },
+
+  uploadFile: async (
+    projectId: number,
+    fileType: string,
+    file: File,
+    role: UserRole,
+  ) => {
+    await delay(800);
+    if (!["WORKING", "REPORT"].includes(fileType))
+      throw {
+        status: 422,
+        code: "VALIDATION_ERROR",
+        message: "유효하지 않은 파일 유형입니다.",
+      };
+    const now = new Date().toISOString();
+    const newFile = {
+      id: MOCK_FILES.length + 1,
+      projectId,
+      projectName: MOCK_PROJECTS.find((p) => p.id === projectId)?.name ?? "",
+      originalFilename: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+      fileType: fileType as import("@/types").FileType,
+      uploaderName:
+        MOCK_USERS.find((u) => u.role === role)?.name ?? "알 수 없음",
+      createdAt: now,
+    };
+    MOCK_FILES.push(newFile);
+    return newFile;
   },
 
   file: async (fileId: number, role: UserRole) => {

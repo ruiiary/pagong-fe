@@ -28,6 +28,7 @@ export interface CreateProjectInput {
   name: string;
   clientName: string;
   description?: string;
+  members: number[];
 }
 
 // ─── File ────────────────────────────────────────────────────────────────────
