@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
 import { FileItem, ShareLink, ApiError } from "@/types";
 import { Loading } from "@/components/ui/Loading";
@@ -149,7 +149,7 @@ export default function FileDetailPage({
     setLoading(true);
     setForbidden(false);
     setError(false);
-    mockHandlers
+    service
       .file(Number(fileId), role)
       .then(setFile)
       .catch((e: ApiError) => {
@@ -168,10 +168,7 @@ export default function FileDetailPage({
     setDownloading(true);
     setDownloadError(false);
     try {
-      const { downloadUrl } = await mockHandlers.downloadFile(
-        Number(fileId),
-        role,
-      );
+      const { downloadUrl } = await service.downloadFile(Number(fileId), role);
       window.open(downloadUrl, "_blank");
     } catch {
       setDownloadError(true);

@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
-import { mockHandlers } from "@/lib/mock/handlers";
-import { storeUser } from "@/lib/authStore";
+import { service } from "@/lib/api/service";
+import { storeUser, storeToken } from "@/lib/authStore";
 import { colors, fontSize, fontWeight, radius, shadow } from "@/styles/tokens";
 
 // ─── Styled ──────────────────────────────────────────────────────────────────
@@ -183,7 +183,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { user } = await mockHandlers.login(email, password);
+      const { token, user } = await service.login(email, password);
+      storeToken(token);
       storeUser(user);
       router.replace("/dashboard");
     } catch (err: unknown) {

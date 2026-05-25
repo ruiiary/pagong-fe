@@ -3,10 +3,9 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
-import { MOCK_PROJECTS } from "@/lib/mock/data";
-import { getRole } from "@/lib/roleStore";
-import { FileType, UserRole } from "@/types";
+import { service } from "@/lib/api/service";
+import { getStoredUser } from "@/lib/authStore";
+import { FileType, UserRole, Project } from "@/types";
 import { formatFileSize, fileTypeLabel } from "@/lib/utils";
 import { fontSize } from "@/styles/tokens";
 
@@ -416,9 +415,14 @@ function UploadPage() {
   const [progress, setProgress] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [role, setRole] = useState<UserRole>("EMPLOYEE");
+  const [projects, setProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    setRole(getRole());
+    const user = getStoredUser();
+    const currentRole = user?.role ?? "EMPLOYEE";
+    setRole(currentRole);
+    const userId = currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
+    service.projects(userId).then(setProjects);
   }, []);
 
   // 이미지 미리보기 URL 생성 및 해제
@@ -479,7 +483,11 @@ function UploadPage() {
     }, 300);
 
     try {
-      await mockHandlers.projectFiles(Number(projectId), role);
+      await Promise.all(
+        selectedFiles.map((file) =>
+          service.uploadFile(Number(projectId), fileType, file, role),
+        ),
+      );
       clearInterval(interval);
       setProgress(100);
       setUploadState("success");
@@ -635,7 +643,7 @@ function UploadPage() {
               onChange={(e) => setProjectId(e.target.value)}
             >
               <option value="">프로젝트 선택</option>
-              {MOCK_PROJECTS.map((p) => (
+              {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

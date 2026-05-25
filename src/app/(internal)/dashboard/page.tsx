@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
 import { MOCK_PROJECTS } from "@/lib/mock/data";
 import { Project, FileItem, ShareLinkDetail, UserRole } from "@/types";
@@ -176,12 +176,12 @@ export default function DashboardPage() {
     const projectUserId =
       currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
     const requests: Promise<unknown>[] = [
-      mockHandlers.projects(projectUserId),
-      mockHandlers.projectFiles(1, currentRole),
+      service.projects(projectUserId),
+      service.projectFiles(1, currentRole),
     ];
     if (showLinks) {
       const userId = currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
-      requests.push(mockHandlers.shareLinksAll(userId));
+      requests.push(service.shareLinksAll(userId));
     }
 
     Promise.all(requests).then((results) => {

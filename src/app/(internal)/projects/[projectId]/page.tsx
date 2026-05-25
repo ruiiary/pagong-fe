@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
 import {
   Project,
@@ -399,7 +399,7 @@ export default function ProjectDetailPage({
       setCurrentUser(u);
       setRole(u.role);
       if (u.role === "MANAGER_EXECUTIVE") {
-        mockHandlers
+        service
           .projectMembers(Number(projectId))
           .then(({ members: m, nonMembers: nm }) => {
             setMembers(m);
@@ -413,8 +413,8 @@ export default function ProjectDetailPage({
     setLoading(true);
     setError(false);
     Promise.all([
-      mockHandlers.project(Number(projectId)),
-      mockHandlers.projectFiles(Number(projectId), role),
+      service.project(Number(projectId)),
+      service.projectFiles(Number(projectId), role),
     ])
       .then(([p, f]) => {
         setProject(p);
@@ -442,8 +442,8 @@ export default function ProjectDetailPage({
 
   const handleAddMember = async (userId: number) => {
     setMemberLoading(true);
-    await mockHandlers.addProjectMember(Number(projectId), userId);
-    const { members: m, nonMembers: nm } = await mockHandlers.projectMembers(
+    await service.addProjectMember(Number(projectId), userId);
+    const { members: m, nonMembers: nm } = await service.projectMembers(
       Number(projectId),
     );
     setMembers(m);
@@ -453,8 +453,8 @@ export default function ProjectDetailPage({
 
   const handleRemoveMember = async (userId: number) => {
     setMemberLoading(true);
-    await mockHandlers.removeProjectMember(Number(projectId), userId);
-    const { members: m, nonMembers: nm } = await mockHandlers.projectMembers(
+    await service.removeProjectMember(Number(projectId), userId);
+    const { members: m, nonMembers: nm } = await service.projectMembers(
       Number(projectId),
     );
     setMembers(m);

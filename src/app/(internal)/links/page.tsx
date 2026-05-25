@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { ShareLinkDetail } from "@/types";
 import { getStoredUser } from "@/lib/authStore";
 import { Loading } from "@/components/ui/Loading";
@@ -186,7 +186,7 @@ export default function LinksPage() {
     setError(false);
     // 팀장·임원은 전체 링크, 사원은 배정된 프로젝트 링크만
     const userId = isManager ? undefined : currentUser?.id;
-    mockHandlers
+    service
       .shareLinksAll(userId)
       .then(setLinks)
       .catch(() => setError(true))
