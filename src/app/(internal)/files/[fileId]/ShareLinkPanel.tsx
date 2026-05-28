@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { MOCK_SHARE_LINKS } from "@/lib/mock/data";
 import { UserRole } from "@/types";
 import { formatDateTime } from "@/lib/utils";
@@ -150,7 +150,7 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
     setCreating(true);
     setCreateError("");
     try {
-      const link = await mockHandlers.createShareLink(fileId, days, role);
+      const link = await service.createShareLink(fileId, days, role);
       setActiveLink({
         token: link.token,
         expiresAt: link.expiresAt,
@@ -208,10 +208,20 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
                 style={{
                   fontSize: fontSize.bodySm,
                   color: "#374151",
-                  margin: "0 0 10px",
+                  margin: "0 0 4px",
+                  fontWeight: 600,
                 }}
               >
                 링크 만료 기간
+              </p>
+              <p
+                style={{
+                  fontSize: fontSize.caption,
+                  color: "#9ca3af",
+                  margin: "0 0 10px",
+                }}
+              >
+                최대 7일 (AWS Presigned URL 제한)
               </p>
               <SelectRow>
                 {[1, 3, 7].map((d) => (

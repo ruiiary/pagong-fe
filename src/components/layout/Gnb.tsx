@@ -138,9 +138,10 @@ const RoleChip = styled.span<{ $role: UserRole }>`
 interface Props {
   userName: string;
   role: UserRole;
+  canViewLinks?: boolean;
 }
 
-export function Gnb({ userName, role }: Props) {
+export function Gnb({ userName, role, canViewLinks }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const initial = userName.charAt(0);
@@ -156,13 +157,16 @@ export function Gnb({ userName, role }: Props) {
         브랜드<LogoAccent>웨이브</LogoAccent>
       </Logo>
       <NavLinks>
+        <NavLink href="/dashboard" $active={pathname === "/dashboard"}>
+          대시보드
+        </NavLink>
         <NavLink href="/projects" $active={pathname.startsWith("/projects")}>
           프로젝트
         </NavLink>
         <NavLink href="/files/upload" $active={pathname === "/files/upload"}>
           파일 업로드
         </NavLink>
-        {role === "MANAGER_EXECUTIVE" && (
+        {canViewLinks && (
           <NavLink href="/links" $active={pathname.startsWith("/links")}>
             링크 관리
           </NavLink>

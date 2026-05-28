@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
 import { Project, FileItem, ShareLinkDetail, UserRole } from "@/types";
 import { Loading } from "@/components/ui/Loading";
@@ -164,43 +164,56 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentRole = getStoredUser()?.role ?? "EMPLOYEE";
+    const user = getStoredUser();
+    const currentRole = user?.role ?? "EMPLOYEE";
     setRole(currentRole);
 
-    const requests: Promise<unknown>[] = [
-      mockHandlers.projects(),
-      mockHandlers.projectFiles(1, currentRole),
-    ];
-    if (currentRole === "MANAGER_EXECUTIVE") {
-      requests.push(mockHandlers.shareLinksAll());
-    }
+    const showLinks = currentRole === "MANAGER";
 
-    Promise.all(requests).then((results) => {
-      setProjects((results[0] as Project[]).slice(0, 3));
-      setFiles((results[1] as FileItem[]).slice(0, 3));
-      if (currentRole === "MANAGER_EXECUTIVE") {
-        setShareLinks((results[2] as ShareLinkDetail[]).slice(0, 4));
-      }
-      setLoading(false);
-    });
+    const projectUserId = currentRole === "MANAGER" ? undefined : user?.id;
+
+    service
+      .projects(projectUserId)
+      .then(async (fetchedProjects) => {
+        setProjects(fetchedProjects.slice(0, 3));
+
+        const firstProject = fetchedProjects[0];
+        if (firstProject) {
+          await service
+            .projectFiles(firstProject.projectId, currentRole)
+            .then((fetchedFiles) => setFiles(fetchedFiles.slice(0, 3)))
+            .catch(() => {});
+        }
+
+        if (showLinks) {
+          const userId = currentRole === "MANAGER" ? undefined : user?.id;
+          await service
+            .shareLinksAll(userId)
+            .then((links) => setShareLinks(links.slice(0, 4)))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loading />;
 
-  const isManager = role === "MANAGER_EXECUTIVE";
+  const isManager = role === "MANAGER";
+  const showLinks = isManager;
 
   return (
     <>
       <PageTitle>대시보드</PageTitle>
-      <Grid $cols={isManager ? 3 : 2}>
+      <Grid $cols={showLinks ? 3 : 2}>
         <Card>
           <CardTitle>최근 업로드 파일</CardTitle>
           {files.map((f) => (
-            <Row key={f.id}>
+            <Row key={f.fileId}>
               <div>
                 <RowMain>
                   <Link
-                    href={`/files/${f.id}`}
+                    href={`/files/${f.fileId}`}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
                     {f.originalFilename}
@@ -208,7 +221,7 @@ export default function DashboardPage() {
                 </RowMain>
                 <RowSub>
                   {fileTypeLabel(f.fileType)} · {formatFileSize(f.fileSize)} ·{" "}
-                  {formatDate(f.createdAt)}
+                  {formatDate(f.uploadedAt)}
                 </RowSub>
               </div>
             </Row>
@@ -219,18 +232,18 @@ export default function DashboardPage() {
         <Card>
           <CardTitle>진행 중인 프로젝트</CardTitle>
           {projects.map((p) => (
-            <Row key={p.id}>
+            <Row key={p.projectId}>
               <div>
                 <RowMain>
                   <Link
-                    href={`/projects/${p.id}`}
+                    href={`/projects/${p.projectId}`}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
                     {p.name}
                   </Link>
                 </RowMain>
                 <RowSub>
-                  {p.clientName} · {formatDate(p.updatedAt)}
+                  {p.clientName} · {formatDate(p.updatedAt ?? "")}
                 </RowSub>
               </div>
             </Row>
@@ -238,7 +251,7 @@ export default function DashboardPage() {
           <ViewAll href="/projects">전체 보기 →</ViewAll>
         </Card>
 
-        {isManager && (
+        {showLinks && (
           <Card>
             <CardTitle>공유 링크 현황</CardTitle>
             {shareLinks.length === 0 ? (

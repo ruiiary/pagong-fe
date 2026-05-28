@@ -2,19 +2,42 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
+import { getStoredUser } from "@/lib/authStore";
 import { Project } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { formatDate } from "@/lib/utils";
 import { fontSize } from "@/styles/tokens";
+import { useRouter } from "next/navigation";
+
+const PageHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+`;
 
 const PageTitle = styled.h1`
   font-size: ${fontSize.display};
   font-weight: 700;
   color: #111827;
-  margin: 0 0 24px;
+  margin: 0;
+`;
+
+const CreateButton = styled.button`
+  padding: 9px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: ${fontSize.body};
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: #1d4ed8;
+  }
 `;
 
 const Table = styled.table`
@@ -58,15 +81,21 @@ const SubText = styled.span`
 `;
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isManager, setIsManager] = useState(false);
 
   const load = () => {
     setLoading(true);
     setError(false);
-    mockHandlers
-      .projects()
+    const currentUser = getStoredUser();
+    const isManagerRole = currentUser?.role === "MANAGER";
+    setIsManager(isManagerRole);
+    const userId = isManagerRole ? undefined : currentUser?.id;
+    service
+      .projects(userId)
       .then(setProjects)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -81,7 +110,14 @@ export default function ProjectsPage() {
 
   return (
     <>
-      <PageTitle>프로젝트 목록</PageTitle>
+      <PageHeader>
+        <PageTitle>프로젝트 목록</PageTitle>
+        {isManager && (
+          <CreateButton onClick={() => router.push("/projects/create")}>
+            + 프로젝트 생성
+          </CreateButton>
+        )}
+      </PageHeader>
       {projects.length === 0 ? (
         <EmptyState message="아직 참여 중인 프로젝트가 없습니다." />
       ) : (
@@ -96,9 +132,9 @@ export default function ProjectsPage() {
           </thead>
           <tbody>
             {projects.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.projectId}>
                 <Td>
-                  <ProjectLink href={`/projects/${p.id}`}>
+                  <ProjectLink href={`/projects/${p.projectId}`}>
                     📁 {p.name}
                   </ProjectLink>
                 </Td>
@@ -106,10 +142,10 @@ export default function ProjectsPage() {
                   <SubText>{p.clientName}</SubText>
                 </Td>
                 <Td>
-                  <SubText>{formatDate(p.createdAt)}</SubText>
+                  <SubText>{formatDate(p.createdAt ?? "")}</SubText>
                 </Td>
                 <Td>
-                  <SubText>{formatDate(p.updatedAt)}</SubText>
+                  <SubText>{formatDate(p.updatedAt ?? "")}</SubText>
                 </Td>
               </tr>
             ))}

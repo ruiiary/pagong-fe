@@ -36,7 +36,11 @@ export default function InternalLayout({
 
   return (
     <>
-      <Gnb userName={user.name} role={user.role} />
+      <Gnb
+        userName={user.name}
+        role={user.role}
+        canViewLinks={user.role === "MANAGER"}
+      />
       <Main>{children}</Main>
     </>
   );

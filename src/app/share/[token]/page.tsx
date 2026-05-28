@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { use } from "react";
 import styled from "styled-components";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { ApiError } from "@/types";
 import { formatFileSize, formatDateTime } from "@/lib/utils";
 import { fontSize } from "@/styles/tokens";
@@ -179,7 +179,7 @@ export default function SharePage({
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    mockHandlers
+    service
       .shareLink(token)
       .then((res) => {
         setSharedFile({
@@ -205,7 +205,7 @@ export default function SharePage({
       setProgress((p) => (p >= 90 ? 90 : p + 20));
     }, 300);
     try {
-      const { downloadUrl } = await mockHandlers.downloadShared(token);
+      const { downloadUrl } = await service.downloadShared(token);
       clearInterval(interval);
       setProgress(100);
       window.open(downloadUrl, "_blank");

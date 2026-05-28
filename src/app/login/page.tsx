@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
-import { mockHandlers } from "@/lib/mock/handlers";
-import { storeUser } from "@/lib/authStore";
+import { service } from "@/lib/api/service";
+import { storeUser, storeToken } from "@/lib/authStore";
 import { colors, fontSize, fontWeight, radius, shadow } from "@/styles/tokens";
 
 // ─── Styled ──────────────────────────────────────────────────────────────────
@@ -147,23 +147,13 @@ const DevAccount = styled.button`
 
 // ─── Dev accounts ─────────────────────────────────────────────────────────────
 
-const DEV_ACCOUNTS = [
-  {
-    label: "사원 (공유 권한 없음)",
-    email: "employee@brandwave.com",
-    password: "password1",
-  },
-  {
-    label: "사원 (공유 권한 있음)",
-    email: "employee2@brandwave.com",
-    password: "password2",
-  },
-  {
-    label: "팀장·임원",
-    email: "manager@brandwave.com",
-    password: "password3",
-  },
-];
+const DEV_ACCOUNTS = (process.env.NEXT_PUBLIC_DEV_ACCOUNTS ?? "")
+  .split(",")
+  .filter(Boolean)
+  .map((entry) => {
+    const [email, password, label] = entry.split(":");
+    return { email, password, label };
+  });
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -183,7 +173,8 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const { user } = await mockHandlers.login(email, password);
+      const { token, user } = await service.login(email, password);
+      storeToken(token);
       storeUser(user);
       router.replace("/dashboard");
     } catch (err: unknown) {

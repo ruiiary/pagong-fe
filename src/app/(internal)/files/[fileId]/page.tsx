@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
 import { FileItem, ShareLink, ApiError } from "@/types";
 import { Loading } from "@/components/ui/Loading";
@@ -149,7 +149,7 @@ export default function FileDetailPage({
     setLoading(true);
     setForbidden(false);
     setError(false);
-    mockHandlers
+    service
       .file(Number(fileId), role)
       .then(setFile)
       .catch((e: ApiError) => {
@@ -168,10 +168,7 @@ export default function FileDetailPage({
     setDownloading(true);
     setDownloadError(false);
     try {
-      const { downloadUrl } = await mockHandlers.downloadFile(
-        Number(fileId),
-        role,
-      );
+      const { downloadUrl } = await service.downloadFile(Number(fileId), role);
       window.open(downloadUrl, "_blank");
     } catch {
       setDownloadError(true);
@@ -208,8 +205,7 @@ export default function FileDetailPage({
   if (error) return <ErrorState onRetry={load} />;
   if (!file) return null;
 
-  const canShare =
-    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
+  const canShare = role === "MANAGER";
 
   return (
     <>
@@ -242,7 +238,7 @@ export default function FileDetailPage({
               </tr>
               <tr>
                 <MetaTh>업로드 일시</MetaTh>
-                <MetaTd>{formatDateTime(file.createdAt)}</MetaTd>
+                <MetaTd>{formatDateTime(file.uploadedAt)}</MetaTd>
               </tr>
             </tbody>
           </MetaTable>
@@ -262,7 +258,7 @@ export default function FileDetailPage({
             )}
           </Card>
 
-          {canShare && <ShareLinkPanel fileId={file.id} role={role} />}
+          {canShare && <ShareLinkPanel fileId={file.fileId} role={role} />}
         </div>
       </Layout>
     </>

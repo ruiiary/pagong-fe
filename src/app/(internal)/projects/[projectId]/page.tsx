@@ -3,9 +3,15 @@ import { useEffect, useState } from "react";
 import { use } from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { mockHandlers } from "@/lib/mock/handlers";
+import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
-import { Project, FileItem, FileType, UserRole, User } from "@/types";
+import {
+  Project,
+  FileItem,
+  FileType,
+  UserRole,
+  User as UserType,
+} from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -268,18 +274,101 @@ const ModalCloseButton = styled.button`
   }
 `;
 
+// ─── Member Management ───────────────────────────────────────────────────────
+
+const MemberSection = styled.div`
+  margin-top: 32px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 20px;
+`;
+
+const MemberSectionTitle = styled.h2`
+  font-size: ${fontSize.h3};
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px;
+`;
+
+const MemberList = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+`;
+
+const AddMemberLabel = styled.span`
+  font-size: ${fontSize.bodySm};
+  color: #6b7280;
+`;
+
+const EmployeeChip = styled.button<{ $selected: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  background: ${({ $selected }) => ($selected ? "#eff6ff" : "#f9fafb")};
+  border: 1px solid ${({ $selected }) => ($selected ? "#bfdbfe" : "#d1d5db")};
+  color: ${({ $selected }) => ($selected ? "#1d4ed8" : "#374151")};
+  &:hover:not(:disabled) {
+    background: ${({ $selected }) => ($selected ? "#dbeafe" : "#f3f4f6")};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const MemberFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+`;
+
+const SaveButton = styled.button`
+  padding: 7px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 600;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+  &:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+`;
+
+const SaveError = styled.span`
+  font-size: ${fontSize.caption};
+  color: #dc2626;
+`;
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 type FilterType = "ALL" | FileType;
 
 const TABS: { value: FilterType; label: string; roles: UserRole[] }[] = [
-  { value: "ALL", label: "전체", roles: ["EMPLOYEE", "MANAGER_EXECUTIVE"] },
+  { value: "ALL", label: "전체", roles: ["EMPLOYEE", "MANAGER"] },
   {
     value: "WORKING",
     label: "작업본",
-    roles: ["EMPLOYEE", "MANAGER_EXECUTIVE"],
+    roles: ["EMPLOYEE", "MANAGER"],
   },
-  { value: "REPORT", label: "보고본", roles: ["MANAGER_EXECUTIVE"] },
+  { value: "REPORT", label: "보고본", roles: ["MANAGER"] },
 ];
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -295,25 +384,37 @@ export default function ProjectDetailPage({
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
   const [role, setRole] = useState<UserRole>("EMPLOYEE");
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [allEmployees, setAllEmployees] = useState<UserType[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [memberLoading, setMemberLoading] = useState(false);
+  const [memberSaveError, setMemberSaveError] = useState(false);
 
   useEffect(() => {
     const u = getStoredUser();
     if (u) {
       setCurrentUser(u);
       setRole(u.role);
+      if (u.role === "MANAGER") {
+        service
+          .projectMembers(Number(projectId))
+          .then(({ members: m, nonMembers: nm }) => {
+            setAllEmployees([...m, ...nm]);
+            setSelectedMemberIds(m.map((member) => member.id));
+          });
+      }
     }
-  }, []);
+  }, [projectId]);
 
   const load = () => {
     setLoading(true);
     setError(false);
     Promise.all([
-      mockHandlers.project(Number(projectId)),
-      mockHandlers.projectFiles(Number(projectId), role),
+      service.project(Number(projectId)),
+      service.projectFiles(Number(projectId), role),
     ])
       .then(([p, f]) => {
         setProject(p);
@@ -339,16 +440,36 @@ export default function ProjectDetailPage({
 
   const closeModal = () => setShowShareModal(false);
 
+  const toggleMember = (userId: number) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
+    );
+    setMemberSaveError(false);
+  };
+
+  const handleSaveMembers = async () => {
+    setMemberLoading(true);
+    setMemberSaveError(false);
+    try {
+      await service.updateStaffAssignees(Number(projectId), selectedMemberIds);
+    } catch {
+      setMemberSaveError(true);
+    } finally {
+      setMemberLoading(false);
+    }
+  };
+
   if (loading) return <Loading />;
   if (error) return <ErrorState onRetry={load} />;
   if (!project) return null;
 
-  const canShare =
-    role === "MANAGER_EXECUTIVE" || !!currentUser?.canCreateShareLink;
+  const canShare = role === "MANAGER";
   const visibleTabs = TABS.filter((t) => t.roles.includes(role));
   const filtered =
     filter === "ALL" ? files : files.filter((f) => f.fileType === filter);
-  const selectedFile = files.find((f) => f.id === selectedFileId) ?? null;
+  const selectedFile = files.find((f) => f.fileId === selectedFileId) ?? null;
 
   return (
     <>
@@ -360,7 +481,7 @@ export default function ProjectDetailPage({
           {project.name}
           <Meta>
             고객사: {project.clientName} · 생성일{" "}
-            {formatDate(project.createdAt)}
+            {formatDate(project.createdAt ?? "")}
           </Meta>
         </Title>
         <UploadButton href={`/files/upload?projectId=${projectId}`}>
@@ -396,21 +517,21 @@ export default function ProjectDetailPage({
           </thead>
           <tbody>
             {filtered.map((f) => (
-              <tr key={f.id}>
+              <tr key={f.fileId}>
                 {canShare && (
                   <TdCheck>
                     {f.fileType === "WORKING" && (
                       <Checkbox
                         type="checkbox"
-                        checked={selectedFileId === f.id}
-                        onChange={() => handleCheckbox(f.id)}
+                        checked={selectedFileId === f.fileId}
+                        onChange={() => handleCheckbox(f.fileId)}
                         title="공유할 파일 선택"
                       />
                     )}
                   </TdCheck>
                 )}
                 <Td>
-                  <FileLink href={`/files/${f.id}`}>
+                  <FileLink href={`/files/${f.fileId}`}>
                     {f.originalFilename}
                   </FileLink>
                 </Td>
@@ -421,7 +542,7 @@ export default function ProjectDetailPage({
                 </Td>
                 <Td>{formatFileSize(f.fileSize)}</Td>
                 <Td>{f.uploaderName}</Td>
-                <Td>{formatDate(f.createdAt)}</Td>
+                <Td>{formatDate(f.uploadedAt)}</Td>
               </tr>
             ))}
           </tbody>
@@ -477,9 +598,60 @@ export default function ProjectDetailPage({
                 </svg>
               </ModalCloseButton>
             </ModalHeader>
-            <ShareLinkPanel fileId={selectedFile.id} role={role} inline />
+            <ShareLinkPanel fileId={selectedFile.fileId} role={role} inline />
           </ModalBox>
         </ModalOverlay>
+      )}
+
+      {canShare && (
+        <MemberSection>
+          <MemberSectionTitle>담당 사원 관리</MemberSectionTitle>
+          <MemberList>
+            {allEmployees.length === 0 ? (
+              <AddMemberLabel>등록된 사원이 없습니다.</AddMemberLabel>
+            ) : (
+              allEmployees.map((u) => {
+                const selected = selectedMemberIds.includes(u.id);
+                return (
+                  <EmployeeChip
+                    key={u.id}
+                    $selected={selected}
+                    onClick={() => toggleMember(u.id)}
+                    disabled={memberLoading}
+                    title={selected ? "배정 해제" : "배정"}
+                  >
+                    {selected && (
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 10 10"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="1.5,5 4,7.5 8.5,2.5" />
+                      </svg>
+                    )}
+                    {u.name}
+                  </EmployeeChip>
+                );
+              })
+            )}
+          </MemberList>
+          <MemberFooter>
+            <AddMemberLabel>{selectedMemberIds.length}명 배정됨</AddMemberLabel>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {memberSaveError && (
+                <SaveError>저장에 실패했습니다. 다시 시도해주세요.</SaveError>
+              )}
+              <SaveButton onClick={handleSaveMembers} disabled={memberLoading}>
+                {memberLoading ? "저장 중..." : "저장"}
+              </SaveButton>
+            </div>
+          </MemberFooter>
+        </MemberSection>
       )}
     </>
   );
