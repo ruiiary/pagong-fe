@@ -157,6 +157,9 @@ export function Gnb({ userName, role, canViewLinks }: Props) {
         브랜드<LogoAccent>웨이브</LogoAccent>
       </Logo>
       <NavLinks>
+        <NavLink href="/dashboard" $active={pathname === "/dashboard"}>
+          대시보드
+        </NavLink>
         <NavLink href="/projects" $active={pathname.startsWith("/projects")}>
           프로젝트
         </NavLink>

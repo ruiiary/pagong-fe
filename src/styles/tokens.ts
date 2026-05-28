@@ -38,7 +38,7 @@ export const colors = {
 // 역할 뱃지
 export const roleBadge = {
   EMPLOYEE: { bg: colors.primary[50], text: colors.primary[600] },
-  MANAGER_EXECUTIVE: { bg: "#fef7e0", text: "#b06000" },
+  MANAGER: { bg: "#fef7e0", text: "#b06000" },
 } as const;
 
 // 파일 유형 뱃지

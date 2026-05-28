@@ -23,7 +23,7 @@ function getUserByEmail(email: string) {
 
 function canAccessFile(fileType: FileType, role: UserRole): boolean {
   if (fileType === "WORKING") return true;
-  if (fileType === "REPORT") return role === "MANAGER_EXECUTIVE";
+  if (fileType === "REPORT") return role === "MANAGER";
   return false;
 }
 
@@ -48,7 +48,7 @@ export const mockHandlers = {
 
   createProject: async (input: CreateProjectInput, role: UserRole) => {
     await delay();
-    if (role !== "MANAGER_EXECUTIVE")
+    if (role !== "MANAGER")
       throw {
         status: 403,
         code: "FORBIDDEN",
@@ -56,28 +56,29 @@ export const mockHandlers = {
       };
     const now = new Date().toISOString();
     const newProject = {
-      id: MOCK_PROJECTS.length + 1,
+      projectId: MOCK_PROJECTS.length + 1,
       name: input.name,
       clientName: input.clientName,
       description: input.description ?? "",
       status: "ACTIVE" as const,
+      myProjectRole: "LEADER" as const,
       createdAt: now,
       updatedAt: now,
-      memberIds: input.members ?? [],
+      memberIds: (input.members ?? []).map((m) => m.userId),
     };
     MOCK_PROJECTS.push(newProject);
-    return newProject;
+    return String(newProject.projectId);
   },
 
   projects: async (userId?: number) => {
     await delay();
     if (userId === undefined) return MOCK_PROJECTS;
-    return MOCK_PROJECTS.filter((p) => p.memberIds.includes(userId));
+    return MOCK_PROJECTS.filter((p) => p.memberIds!.includes(userId));
   },
 
   project: async (projectId: number) => {
     await delay();
-    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
     if (!project)
       throw {
         status: 404,
@@ -116,16 +117,17 @@ export const mockHandlers = {
       };
     const now = new Date().toISOString();
     const newFile = {
-      id: MOCK_FILES.length + 1,
+      fileId: MOCK_FILES.length + 1,
       projectId,
-      projectName: MOCK_PROJECTS.find((p) => p.id === projectId)?.name ?? "",
+      projectName:
+        MOCK_PROJECTS.find((p) => p.projectId === projectId)?.name ?? "",
       originalFilename: file.name,
       fileSize: file.size,
       mimeType: file.type,
       fileType: fileType as import("@/types").FileType,
       uploaderName:
         MOCK_USERS.find((u) => u.role === role)?.name ?? "알 수 없음",
-      createdAt: now,
+      uploadedAt: now,
     };
     MOCK_FILES.push(newFile);
     return newFile;
@@ -133,7 +135,7 @@ export const mockHandlers = {
 
   file: async (fileId: number, role: UserRole) => {
     await delay();
-    const file = MOCK_FILES.find((f) => f.id === fileId);
+    const file = MOCK_FILES.find((f) => f.fileId === fileId);
     if (!file)
       throw {
         status: 404,
@@ -151,7 +153,7 @@ export const mockHandlers = {
 
   downloadFile: async (fileId: number, role: UserRole) => {
     await delay(800);
-    const file = MOCK_FILES.find((f) => f.id === fileId);
+    const file = MOCK_FILES.find((f) => f.fileId === fileId);
     if (!file)
       throw {
         status: 404,
@@ -173,13 +175,13 @@ export const mockHandlers = {
     role: UserRole,
   ) => {
     await delay();
-    if (role !== "MANAGER_EXECUTIVE")
+    if (role !== "MANAGER")
       throw {
         status: 403,
         code: "FORBIDDEN",
         message: "공유 링크 생성 권한이 없습니다.",
       };
-    const file = MOCK_FILES.find((f) => f.id === fileId);
+    const file = MOCK_FILES.find((f) => f.fileId === fileId);
     if (!file)
       throw {
         status: 404,
@@ -216,7 +218,7 @@ export const mockHandlers = {
         code: "EXPIRED",
         message: "공유 링크가 만료되었습니다.",
       };
-    const file = MOCK_FILES.find((f) => f.id === link.fileId)!;
+    const file = MOCK_FILES.find((f) => f.fileId === link.fileId)!;
     return {
       file: {
         filename: file.originalFilename,
@@ -251,16 +253,18 @@ export const mockHandlers = {
     if (userId !== undefined) {
       // employee: only links for projects they are assigned to
       const assignedProjectIds = MOCK_PROJECTS.filter((p) =>
-        p.memberIds.includes(userId),
-      ).map((p) => p.id);
+        p.memberIds!.includes(userId),
+      ).map((p) => p.projectId);
       filtered = MOCK_SHARE_LINKS.filter((l) => {
-        const file = MOCK_FILES.find((f) => f.id === l.fileId);
-        return file ? assignedProjectIds.includes(file.projectId) : false;
+        const file = MOCK_FILES.find((f) => f.fileId === l.fileId);
+        return file ? assignedProjectIds.includes(file.projectId ?? 0) : false;
       });
     }
     return filtered.map((link) => {
-      const file = MOCK_FILES.find((f) => f.id === link.fileId)!;
-      const project = MOCK_PROJECTS.find((p) => p.id === file.projectId)!;
+      const file = MOCK_FILES.find((f) => f.fileId === link.fileId)!;
+      const project = MOCK_PROJECTS.find(
+        (p) => p.projectId === file.projectId,
+      )!;
       const creator = MOCK_USERS.find((u) => u.id === link.createdById)!;
       return {
         id: link.id,
@@ -272,7 +276,7 @@ export const mockHandlers = {
         createdById: link.createdById,
         createdByName: creator?.name ?? "알 수 없음",
         filename: file.originalFilename,
-        projectId: project.id,
+        projectId: project.projectId,
         projectName: project.name,
       };
     });
@@ -280,7 +284,7 @@ export const mockHandlers = {
 
   projectMembers: async (projectId: number) => {
     await delay(200);
-    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
     if (!project)
       throw {
         status: 404,
@@ -290,37 +294,58 @@ export const mockHandlers = {
     const employees = MOCK_USERS.filter((u) => u.role === "EMPLOYEE");
     return {
       members: employees
-        .filter((u) => project.memberIds.includes(u.id))
+        .filter((u) => project.memberIds!.includes(u.id))
         .map(({ password: _, ...u }) => u),
       nonMembers: employees
-        .filter((u) => !project.memberIds.includes(u.id))
+        .filter((u) => !project.memberIds!.includes(u.id))
         .map(({ password: _, ...u }) => u),
     };
   },
 
-  addProjectMember: async (projectId: number, userId: number) => {
+  updateStaffAssignees: async (projectId: number, staffUserIds: number[]) => {
     await delay(300);
-    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
     if (!project)
       throw {
         status: 404,
         code: "NOT_FOUND",
         message: "프로젝트를 찾을 수 없습니다.",
       };
-    if (!project.memberIds.includes(userId)) project.memberIds.push(userId);
+    project.memberIds = staffUserIds;
+    const staffAssignees = MOCK_USERS.filter((u) =>
+      staffUserIds.includes(u.id),
+    ).map(({ password: _, ...u }) => ({
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+    }));
+    return { projectId, staffAssignees };
+  },
+
+  addProjectMember: async (projectId: number, userId: number) => {
+    await delay(300);
+    const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
+    if (!project)
+      throw {
+        status: 404,
+        code: "NOT_FOUND",
+        message: "프로젝트를 찾을 수 없습니다.",
+      };
+    if (!project.memberIds?.includes(userId))
+      project.memberIds = [...(project.memberIds ?? []), userId];
     return { ok: true };
   },
 
   removeProjectMember: async (projectId: number, userId: number) => {
     await delay(300);
-    const project = MOCK_PROJECTS.find((p) => p.id === projectId);
+    const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
     if (!project)
       throw {
         status: 404,
         code: "NOT_FOUND",
         message: "프로젝트를 찾을 수 없습니다.",
       };
-    project.memberIds = project.memberIds.filter((id) => id !== userId);
+    project.memberIds = (project.memberIds ?? []).filter((id) => id !== userId);
     return { ok: true };
   },
 };

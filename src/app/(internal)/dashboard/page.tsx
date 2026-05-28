@@ -4,7 +4,6 @@ import styled from "styled-components";
 import Link from "next/link";
 import { service } from "@/lib/api/service";
 import { getStoredUser } from "@/lib/authStore";
-import { MOCK_PROJECTS } from "@/lib/mock/data";
 import { Project, FileItem, ShareLinkDetail, UserRole } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import {
@@ -169,38 +168,39 @@ export default function DashboardPage() {
     const currentRole = user?.role ?? "EMPLOYEE";
     setRole(currentRole);
 
-    const showLinks =
-      currentRole === "MANAGER_EXECUTIVE" ||
-      (!!user && MOCK_PROJECTS.some((p) => p.memberIds.includes(user.id)));
+    const showLinks = currentRole === "MANAGER";
 
-    const projectUserId =
-      currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
-    const requests: Promise<unknown>[] = [
-      service.projects(projectUserId),
-      service.projectFiles(1, currentRole),
-    ];
-    if (showLinks) {
-      const userId = currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
-      requests.push(service.shareLinksAll(userId));
-    }
+    const projectUserId = currentRole === "MANAGER" ? undefined : user?.id;
 
-    Promise.all(requests).then((results) => {
-      setProjects((results[0] as Project[]).slice(0, 3));
-      setFiles((results[1] as FileItem[]).slice(0, 3));
-      if (showLinks) {
-        setShareLinks((results[2] as ShareLinkDetail[]).slice(0, 4));
-      }
-      setLoading(false);
-    });
+    service
+      .projects(projectUserId)
+      .then(async (fetchedProjects) => {
+        setProjects(fetchedProjects.slice(0, 3));
+
+        const firstProject = fetchedProjects[0];
+        if (firstProject) {
+          await service
+            .projectFiles(firstProject.projectId, currentRole)
+            .then((fetchedFiles) => setFiles(fetchedFiles.slice(0, 3)))
+            .catch(() => {});
+        }
+
+        if (showLinks) {
+          const userId = currentRole === "MANAGER" ? undefined : user?.id;
+          await service
+            .shareLinksAll(userId)
+            .then((links) => setShareLinks(links.slice(0, 4)))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <Loading />;
 
-  const isManager = role === "MANAGER_EXECUTIVE";
-  const user = getStoredUser();
-  const showLinks =
-    isManager ||
-    (!!user && MOCK_PROJECTS.some((p) => p.memberIds.includes(user.id)));
+  const isManager = role === "MANAGER";
+  const showLinks = isManager;
 
   return (
     <>
@@ -209,11 +209,11 @@ export default function DashboardPage() {
         <Card>
           <CardTitle>최근 업로드 파일</CardTitle>
           {files.map((f) => (
-            <Row key={f.id}>
+            <Row key={f.fileId}>
               <div>
                 <RowMain>
                   <Link
-                    href={`/files/${f.id}`}
+                    href={`/files/${f.fileId}`}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
                     {f.originalFilename}
@@ -221,7 +221,7 @@ export default function DashboardPage() {
                 </RowMain>
                 <RowSub>
                   {fileTypeLabel(f.fileType)} · {formatFileSize(f.fileSize)} ·{" "}
-                  {formatDate(f.createdAt)}
+                  {formatDate(f.uploadedAt)}
                 </RowSub>
               </div>
             </Row>
@@ -232,18 +232,18 @@ export default function DashboardPage() {
         <Card>
           <CardTitle>진행 중인 프로젝트</CardTitle>
           {projects.map((p) => (
-            <Row key={p.id}>
+            <Row key={p.projectId}>
               <div>
                 <RowMain>
                   <Link
-                    href={`/projects/${p.id}`}
+                    href={`/projects/${p.projectId}`}
                     style={{ color: "inherit", textDecoration: "none" }}
                   >
                     {p.name}
                   </Link>
                 </RowMain>
                 <RowSub>
-                  {p.clientName} · {formatDate(p.updatedAt)}
+                  {p.clientName} · {formatDate(p.updatedAt ?? "")}
                 </RowSub>
               </div>
             </Row>

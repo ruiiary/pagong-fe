@@ -38,7 +38,7 @@ const Select = styled.select`
 
 const ROLES: { value: UserRole; label: string }[] = [
   { value: "EMPLOYEE", label: "사원" },
-  { value: "MANAGER_EXECUTIVE", label: "팀장·임원" },
+  { value: "MANAGER", label: "팀장·임원" },
 ];
 
 export function DevRoleSelector() {

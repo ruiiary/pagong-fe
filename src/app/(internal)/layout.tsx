@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { Gnb } from "@/components/layout/Gnb";
 import { getStoredUser } from "@/lib/authStore";
-import { MOCK_PROJECTS } from "@/lib/mock/data";
 import { User } from "@/types";
 import { colors, layout } from "@/styles/tokens";
 
@@ -40,10 +39,7 @@ export default function InternalLayout({
       <Gnb
         userName={user.name}
         role={user.role}
-        canViewLinks={
-          user.role === "MANAGER_EXECUTIVE" ||
-          MOCK_PROJECTS.some((p) => p.memberIds.includes(user.id))
-        }
+        canViewLinks={user.role === "MANAGER"}
       />
       <Main>{children}</Main>
     </>

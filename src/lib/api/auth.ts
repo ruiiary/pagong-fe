@@ -8,13 +8,13 @@ export const authApi = {
     email: string,
     password: string,
   ): Promise<{ token: string; user: User }> => {
-    const { data: token } = await apiClient.post<string>("/api/auth/login", {
-      email,
-      password,
-    });
-    storeToken(token);
-    const user = await authApi.me();
-    return { token, user };
+    const { data } = await apiClient.post<{
+      accessToken: string;
+      tokenType: string;
+      user: User;
+    }>("/api/auth/login", { email, password });
+    storeToken(data.accessToken);
+    return { token: data.accessToken, user: data.user };
   },
 
   // GET /api/auth/me → 로그인한 유저 정보 반환

@@ -179,7 +179,7 @@ export default function LinksPage() {
   const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const currentUser = getStoredUser();
-  const isManager = currentUser?.role === "MANAGER_EXECUTIVE";
+  const isManager = currentUser?.role === "MANAGER";
 
   const load = () => {
     setLoading(true);

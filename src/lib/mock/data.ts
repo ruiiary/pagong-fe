@@ -20,37 +20,40 @@ export const MOCK_USERS: (User & { password: string })[] = [
     name: "이팀장",
     email: "manager@brandwave.com",
     password: "password3",
-    role: "MANAGER_EXECUTIVE",
+    role: "MANAGER",
   },
 ];
 
 export const MOCK_PROJECTS: Project[] = [
   {
-    id: 1,
+    projectId: 1,
     name: "A뷰티 여름 캠페인",
     clientName: "A뷰티",
     description: "여름 신제품 런칭을 위한 디지털 마케팅 캠페인",
     status: "ACTIVE",
+    myProjectRole: "MEMBER",
     createdAt: "2026-04-01T09:00:00Z",
     updatedAt: "2026-05-19T14:32:00Z",
     memberIds: [2],
   },
   {
-    id: 2,
+    projectId: 2,
     name: "B식품 SNS 광고",
     clientName: "B식품",
     description: "인스타그램·유튜브 숏폼 광고 콘텐츠 제작",
     status: "ACTIVE",
+    myProjectRole: "MEMBER",
     createdAt: "2026-04-15T10:00:00Z",
     updatedAt: "2026-05-18T10:00:00Z",
     memberIds: [1],
   },
   {
-    id: 3,
+    projectId: 3,
     name: "C패션 캠페인",
     clientName: "C패션",
     description: "가을 시즌 브랜드 캠페인",
     status: "ACTIVE",
+    myProjectRole: "LEADER",
     createdAt: "2026-05-01T09:00:00Z",
     updatedAt: "2026-05-16T09:15:00Z",
     memberIds: [],
@@ -59,7 +62,7 @@ export const MOCK_PROJECTS: Project[] = [
 
 export const MOCK_FILES: FileItem[] = [
   {
-    id: 1,
+    fileId: 1,
     projectId: 1,
     projectName: "A뷰티 여름 캠페인",
     originalFilename: "A뷰티_배너시안_v1.png",
@@ -67,10 +70,10 @@ export const MOCK_FILES: FileItem[] = [
     mimeType: "image/png",
     fileType: "WORKING",
     uploaderName: "김사원",
-    createdAt: "2026-05-19T14:32:00Z",
+    uploadedAt: "2026-05-19T14:32:00Z",
   },
   {
-    id: 2,
+    fileId: 2,
     projectId: 1,
     projectName: "A뷰티 여름 캠페인",
     originalFilename: "A뷰티_최종시안.png",
@@ -78,10 +81,10 @@ export const MOCK_FILES: FileItem[] = [
     mimeType: "image/png",
     fileType: "WORKING",
     uploaderName: "이팀장",
-    createdAt: "2026-05-18T10:00:00Z",
+    uploadedAt: "2026-05-18T10:00:00Z",
   },
   {
-    id: 3,
+    fileId: 3,
     projectId: 1,
     projectName: "A뷰티 여름 캠페인",
     originalFilename: "A뷰티_보고서.pdf",
@@ -89,10 +92,10 @@ export const MOCK_FILES: FileItem[] = [
     mimeType: "application/pdf",
     fileType: "REPORT",
     uploaderName: "이팀장",
-    createdAt: "2026-05-17T09:00:00Z",
+    uploadedAt: "2026-05-17T09:00:00Z",
   },
   {
-    id: 4,
+    fileId: 4,
     projectId: 2,
     projectName: "B식품 SNS 광고",
     originalFilename: "B식품_영상초안.mp4",
@@ -100,7 +103,7 @@ export const MOCK_FILES: FileItem[] = [
     mimeType: "video/mp4",
     fileType: "WORKING",
     uploaderName: "김사원",
-    createdAt: "2026-05-18T11:00:00Z",
+    uploadedAt: "2026-05-18T11:00:00Z",
   },
 ];
 

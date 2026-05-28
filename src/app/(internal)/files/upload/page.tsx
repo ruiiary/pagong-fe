@@ -396,7 +396,7 @@ const SuccessFileItem = styled.li`
 
 const FILE_TYPES_BY_ROLE: Record<string, FileType[]> = {
   EMPLOYEE: ["WORKING"],
-  MANAGER_EXECUTIVE: ["WORKING", "REPORT"],
+  MANAGER: ["WORKING", "REPORT"],
 };
 
 type UploadState = "idle" | "uploading" | "success" | "error";
@@ -421,7 +421,7 @@ function UploadPage() {
     const user = getStoredUser();
     const currentRole = user?.role ?? "EMPLOYEE";
     setRole(currentRole);
-    const userId = currentRole === "MANAGER_EXECUTIVE" ? undefined : user?.id;
+    const userId = currentRole === "MANAGER" ? undefined : user?.id;
     service.projects(userId).then(setProjects);
   }, []);
 
@@ -644,7 +644,7 @@ function UploadPage() {
             >
               <option value="">프로젝트 선택</option>
               {projects.map((p) => (
-                <option key={p.id} value={p.id}>
+                <option key={p.projectId} value={p.projectId}>
                   {p.name}
                 </option>
               ))}

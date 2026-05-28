@@ -4,8 +4,10 @@ import { Project, FileItem, CreateProjectInput } from "@/types";
 export const projectsApi = {
   // GET /api/projects
   list: async (): Promise<Project[]> => {
-    const { data } = await apiClient.get<Project[]>("/api/projects");
-    return data;
+    const { data } = await apiClient.get<{ projects: Project[] }>(
+      "/api/projects",
+    );
+    return data.projects;
   },
 
   // GET /api/projects/{project_id}
@@ -15,8 +17,8 @@ export const projectsApi = {
   },
 
   // POST /api/projects
-  create: async (input: CreateProjectInput): Promise<Project> => {
-    const { data } = await apiClient.post<Project>("/api/projects", input);
+  create: async (input: CreateProjectInput): Promise<string> => {
+    const { data } = await apiClient.post<string>("/api/projects", input);
     return data;
   },
 
@@ -25,9 +27,26 @@ export const projectsApi = {
     projectId: number,
     fileType?: string | null,
   ): Promise<FileItem[]> => {
-    const { data } = await apiClient.get<FileItem[]>(
-      `/api/projects/${projectId}/files`,
-      { params: fileType ? { fileType } : undefined },
+    const { data } = await apiClient.get<{
+      files: FileItem[];
+      totalCount: number;
+    }>(`/api/projects/${projectId}/files`, {
+      params: fileType ? { fileType } : undefined,
+    });
+    return data.files;
+  },
+
+  // PUT /api/projects/{project_id}/staff-assignees
+  updateStaffAssignees: async (
+    projectId: number,
+    staffUserIds: number[],
+  ): Promise<{
+    projectId: number;
+    staffAssignees: { userId: number; name: string; email: string }[];
+  }> => {
+    const { data } = await apiClient.put(
+      `/api/projects/${projectId}/staff-assignees`,
+      { staffUserIds },
     );
     return data;
   },

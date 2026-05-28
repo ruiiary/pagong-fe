@@ -205,7 +205,7 @@ export default function FileDetailPage({
   if (error) return <ErrorState onRetry={load} />;
   if (!file) return null;
 
-  const canShare = role === "MANAGER_EXECUTIVE";
+  const canShare = role === "MANAGER";
 
   return (
     <>
@@ -238,7 +238,7 @@ export default function FileDetailPage({
               </tr>
               <tr>
                 <MetaTh>업로드 일시</MetaTh>
-                <MetaTd>{formatDateTime(file.createdAt)}</MetaTd>
+                <MetaTd>{formatDateTime(file.uploadedAt)}</MetaTd>
               </tr>
             </tbody>
           </MetaTable>
@@ -258,7 +258,7 @@ export default function FileDetailPage({
             )}
           </Card>
 
-          {canShare && <ShareLinkPanel fileId={file.id} role={role} />}
+          {canShare && <ShareLinkPanel fileId={file.fileId} role={role} />}
         </div>
       </Layout>
     </>

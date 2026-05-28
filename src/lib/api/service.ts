@@ -30,6 +30,14 @@ export const service = {
   // ─── Projects ──────────────────────────────────────────────────────────────
 
   // userId는 mock 전용 (서버는 JWT로 자동 필터)
+  createProject: (
+    input: import("@/types").CreateProjectInput,
+    role: import("@/types").UserRole,
+  ) =>
+    USE_REAL_API
+      ? projectsApi.create(input)
+      : mockHandlers.createProject(input, role),
+
   projects: (userId?: number) =>
     USE_REAL_API ? projectsApi.list() : mockHandlers.projects(userId),
 
@@ -80,13 +88,13 @@ export const service = {
 
   downloadShared: (token: string) => mockHandlers.downloadShared(token),
 
-  // ─── Project Members (API 미수신 → mock 고정) ──────────────────────────────
+  // ─── Project Members ───────────────────────────────────────────────────────
 
+  // GET은 mock 고정 (서버 미제공), PUT은 실제 API 사용
   projectMembers: (projectId: number) => mockHandlers.projectMembers(projectId),
 
-  addProjectMember: (projectId: number, userId: number) =>
-    mockHandlers.addProjectMember(projectId, userId),
-
-  removeProjectMember: (projectId: number, userId: number) =>
-    mockHandlers.removeProjectMember(projectId, userId),
+  updateStaffAssignees: (projectId: number, staffUserIds: number[]) =>
+    USE_REAL_API
+      ? projectsApi.updateStaffAssignees(projectId, staffUserIds)
+      : mockHandlers.updateStaffAssignees(projectId, staffUserIds),
 };

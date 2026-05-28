@@ -298,59 +298,28 @@ const MemberList = styled.div`
   margin-bottom: 16px;
 `;
 
-const MemberChip = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px 4px 12px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 99px;
-  font-size: ${fontSize.bodySm};
-  color: #1d4ed8;
-  font-weight: 500;
-`;
-
-const RemoveChipButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  background: none;
-  border: none;
-  color: #93c5fd;
-  cursor: pointer;
-  padding: 0;
-  border-radius: 50%;
-  &:hover {
-    color: #1d4ed8;
-    background: #dbeafe;
-  }
-`;
-
-const AddMemberRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-`;
-
 const AddMemberLabel = styled.span`
   font-size: ${fontSize.bodySm};
   color: #6b7280;
 `;
 
-const AddButton = styled.button`
+const EmployeeChip = styled.button<{ $selected: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 12px;
-  background: none;
-  border: 1px solid #d1d5db;
   border-radius: 99px;
   font-size: ${fontSize.bodySm};
-  color: #374151;
+  font-weight: 500;
   cursor: pointer;
-  &:hover {
-    background: #f3f4f6;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  background: ${({ $selected }) => ($selected ? "#eff6ff" : "#f9fafb")};
+  border: 1px solid ${({ $selected }) => ($selected ? "#bfdbfe" : "#d1d5db")};
+  color: ${({ $selected }) => ($selected ? "#1d4ed8" : "#374151")};
+  &:hover:not(:disabled) {
+    background: ${({ $selected }) => ($selected ? "#dbeafe" : "#f3f4f6")};
   }
   &:disabled {
     opacity: 0.5;
@@ -358,18 +327,48 @@ const AddButton = styled.button`
   }
 `;
 
+const MemberFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+`;
+
+const SaveButton = styled.button`
+  padding: 7px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 600;
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: #1d4ed8;
+  }
+  &:disabled {
+    background: #93c5fd;
+    cursor: not-allowed;
+  }
+`;
+
+const SaveError = styled.span`
+  font-size: ${fontSize.caption};
+  color: #dc2626;
+`;
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 type FilterType = "ALL" | FileType;
 
 const TABS: { value: FilterType; label: string; roles: UserRole[] }[] = [
-  { value: "ALL", label: "전체", roles: ["EMPLOYEE", "MANAGER_EXECUTIVE"] },
+  { value: "ALL", label: "전체", roles: ["EMPLOYEE", "MANAGER"] },
   {
     value: "WORKING",
     label: "작업본",
-    roles: ["EMPLOYEE", "MANAGER_EXECUTIVE"],
+    roles: ["EMPLOYEE", "MANAGER"],
   },
-  { value: "REPORT", label: "보고본", roles: ["MANAGER_EXECUTIVE"] },
+  { value: "REPORT", label: "보고본", roles: ["MANAGER"] },
 ];
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -389,21 +388,22 @@ export default function ProjectDetailPage({
   const [role, setRole] = useState<UserRole>("EMPLOYEE");
   const [selectedFileId, setSelectedFileId] = useState<number | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [members, setMembers] = useState<UserType[]>([]);
-  const [nonMembers, setNonMembers] = useState<UserType[]>([]);
+  const [allEmployees, setAllEmployees] = useState<UserType[]>([]);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
+  const [memberSaveError, setMemberSaveError] = useState(false);
 
   useEffect(() => {
     const u = getStoredUser();
     if (u) {
       setCurrentUser(u);
       setRole(u.role);
-      if (u.role === "MANAGER_EXECUTIVE") {
+      if (u.role === "MANAGER") {
         service
           .projectMembers(Number(projectId))
           .then(({ members: m, nonMembers: nm }) => {
-            setMembers(m);
-            setNonMembers(nm);
+            setAllEmployees([...m, ...nm]);
+            setSelectedMemberIds(m.map((member) => member.id));
           });
       }
     }
@@ -440,37 +440,36 @@ export default function ProjectDetailPage({
 
   const closeModal = () => setShowShareModal(false);
 
-  const handleAddMember = async (userId: number) => {
-    setMemberLoading(true);
-    await service.addProjectMember(Number(projectId), userId);
-    const { members: m, nonMembers: nm } = await service.projectMembers(
-      Number(projectId),
+  const toggleMember = (userId: number) => {
+    setSelectedMemberIds((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId],
     );
-    setMembers(m);
-    setNonMembers(nm);
-    setMemberLoading(false);
+    setMemberSaveError(false);
   };
 
-  const handleRemoveMember = async (userId: number) => {
+  const handleSaveMembers = async () => {
     setMemberLoading(true);
-    await service.removeProjectMember(Number(projectId), userId);
-    const { members: m, nonMembers: nm } = await service.projectMembers(
-      Number(projectId),
-    );
-    setMembers(m);
-    setNonMembers(nm);
-    setMemberLoading(false);
+    setMemberSaveError(false);
+    try {
+      await service.updateStaffAssignees(Number(projectId), selectedMemberIds);
+    } catch {
+      setMemberSaveError(true);
+    } finally {
+      setMemberLoading(false);
+    }
   };
 
   if (loading) return <Loading />;
   if (error) return <ErrorState onRetry={load} />;
   if (!project) return null;
 
-  const canShare = role === "MANAGER_EXECUTIVE";
+  const canShare = role === "MANAGER";
   const visibleTabs = TABS.filter((t) => t.roles.includes(role));
   const filtered =
     filter === "ALL" ? files : files.filter((f) => f.fileType === filter);
-  const selectedFile = files.find((f) => f.id === selectedFileId) ?? null;
+  const selectedFile = files.find((f) => f.fileId === selectedFileId) ?? null;
 
   return (
     <>
@@ -482,7 +481,7 @@ export default function ProjectDetailPage({
           {project.name}
           <Meta>
             고객사: {project.clientName} · 생성일{" "}
-            {formatDate(project.createdAt)}
+            {formatDate(project.createdAt ?? "")}
           </Meta>
         </Title>
         <UploadButton href={`/files/upload?projectId=${projectId}`}>
@@ -518,21 +517,21 @@ export default function ProjectDetailPage({
           </thead>
           <tbody>
             {filtered.map((f) => (
-              <tr key={f.id}>
+              <tr key={f.fileId}>
                 {canShare && (
                   <TdCheck>
                     {f.fileType === "WORKING" && (
                       <Checkbox
                         type="checkbox"
-                        checked={selectedFileId === f.id}
-                        onChange={() => handleCheckbox(f.id)}
+                        checked={selectedFileId === f.fileId}
+                        onChange={() => handleCheckbox(f.fileId)}
                         title="공유할 파일 선택"
                       />
                     )}
                   </TdCheck>
                 )}
                 <Td>
-                  <FileLink href={`/files/${f.id}`}>
+                  <FileLink href={`/files/${f.fileId}`}>
                     {f.originalFilename}
                   </FileLink>
                 </Td>
@@ -543,7 +542,7 @@ export default function ProjectDetailPage({
                 </Td>
                 <Td>{formatFileSize(f.fileSize)}</Td>
                 <Td>{f.uploaderName}</Td>
-                <Td>{formatDate(f.createdAt)}</Td>
+                <Td>{formatDate(f.uploadedAt)}</Td>
               </tr>
             ))}
           </tbody>
@@ -599,7 +598,7 @@ export default function ProjectDetailPage({
                 </svg>
               </ModalCloseButton>
             </ModalHeader>
-            <ShareLinkPanel fileId={selectedFile.id} role={role} inline />
+            <ShareLinkPanel fileId={selectedFile.fileId} role={role} inline />
           </ModalBox>
         </ModalOverlay>
       )}
@@ -608,48 +607,50 @@ export default function ProjectDetailPage({
         <MemberSection>
           <MemberSectionTitle>담당 사원 관리</MemberSectionTitle>
           <MemberList>
-            {members.length === 0 ? (
-              <AddMemberLabel>배정된 사원이 없습니다.</AddMemberLabel>
+            {allEmployees.length === 0 ? (
+              <AddMemberLabel>등록된 사원이 없습니다.</AddMemberLabel>
             ) : (
-              members.map((m) => (
-                <MemberChip key={m.id}>
-                  {m.name}
-                  <RemoveChipButton
-                    onClick={() => handleRemoveMember(m.id)}
+              allEmployees.map((u) => {
+                const selected = selectedMemberIds.includes(u.id);
+                return (
+                  <EmployeeChip
+                    key={u.id}
+                    $selected={selected}
+                    onClick={() => toggleMember(u.id)}
                     disabled={memberLoading}
-                    title="배정 해제"
+                    title={selected ? "배정 해제" : "배정"}
                   >
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    >
-                      <line x1="2" y1="2" x2="8" y2="8" />
-                      <line x1="8" y1="2" x2="2" y2="8" />
-                    </svg>
-                  </RemoveChipButton>
-                </MemberChip>
-              ))
+                    {selected && (
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 10 10"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="1.5,5 4,7.5 8.5,2.5" />
+                      </svg>
+                    )}
+                    {u.name}
+                  </EmployeeChip>
+                );
+              })
             )}
           </MemberList>
-          {nonMembers.length > 0 && (
-            <AddMemberRow>
-              <AddMemberLabel>사원 추가:</AddMemberLabel>
-              {nonMembers.map((u) => (
-                <AddButton
-                  key={u.id}
-                  onClick={() => handleAddMember(u.id)}
-                  disabled={memberLoading}
-                >
-                  + {u.name}
-                </AddButton>
-              ))}
-            </AddMemberRow>
-          )}
+          <MemberFooter>
+            <AddMemberLabel>{selectedMemberIds.length}명 배정됨</AddMemberLabel>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {memberSaveError && (
+                <SaveError>저장에 실패했습니다. 다시 시도해주세요.</SaveError>
+              )}
+              <SaveButton onClick={handleSaveMembers} disabled={memberLoading}>
+                {memberLoading ? "저장 중..." : "저장"}
+              </SaveButton>
+            </div>
+          </MemberFooter>
         </MemberSection>
       )}
     </>

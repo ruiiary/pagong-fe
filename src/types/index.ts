@@ -1,6 +1,6 @@
 // ─── User ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "EMPLOYEE" | "MANAGER_EXECUTIVE";
+export type UserRole = "EMPLOYEE" | "MANAGER";
 
 export interface User {
   id: number;
@@ -14,21 +14,22 @@ export interface User {
 export type ProjectStatus = "ACTIVE" | "CLOSED";
 
 export interface Project {
-  id: number;
+  projectId: number;
   name: string;
   clientName: string;
-  description: string;
   status: ProjectStatus;
-  createdAt: string;
-  updatedAt: string;
-  memberIds: number[];
+  myProjectRole: "MEMBER" | "LEADER";
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  memberIds?: number[];
 }
 
 export interface CreateProjectInput {
   name: string;
   clientName: string;
   description?: string;
-  members: number[];
+  members: { projectRole: "MEMBER" | "LEADER"; userId: number }[];
 }
 
 // ─── File ────────────────────────────────────────────────────────────────────
@@ -36,15 +37,16 @@ export interface CreateProjectInput {
 export type FileType = "WORKING" | "REPORT";
 
 export interface FileItem {
-  id: number;
-  projectId: number;
-  projectName: string;
+  fileId: number;
   originalFilename: string;
   fileSize: number;
   mimeType: string;
   fileType: FileType;
   uploaderName: string;
-  createdAt: string;
+  uploadedAt: string;
+  projectId?: number;
+  projectName?: string;
+  createdAt?: string;
 }
 
 // ─── Share Link ───────────────────────────────────────────────────────────────
