@@ -96,7 +96,15 @@ export default function ProjectsPage() {
     const userId = isManagerRole ? undefined : currentUser?.id;
     service
       .projects(userId)
-      .then(setProjects)
+      .then((data) =>
+        setProjects(
+          [...data].sort(
+            (a, b) =>
+              new Date(b.createdAt ?? 0).getTime() -
+              new Date(a.createdAt ?? 0).getTime(),
+          ),
+        ),
+      )
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   };

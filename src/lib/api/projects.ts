@@ -36,18 +36,20 @@ export const projectsApi = {
     return data.files;
   },
 
-  // PUT /api/projects/{project_id}/staff-assignees
-  updateStaffAssignees: async (
+  // PUT /api/projects/{project_id}/members
+  updateMembers: async (
     projectId: number,
-    staffUserIds: number[],
+    memberUserIds: number[],
   ): Promise<{
     projectId: number;
-    staffAssignees: { userId: number; name: string; email: string }[];
+    members: import("@/types").ProjectMember[];
   }> => {
-    const { data } = await apiClient.put(
-      `/api/projects/${projectId}/staff-assignees`,
-      { staffUserIds },
-    );
+    const { data } = await apiClient.put(`/api/projects/${projectId}/members`, {
+      members: memberUserIds.map((userId) => ({
+        projectRole: "MEMBER" as const,
+        userId,
+      })),
+    });
     return data;
   },
 
