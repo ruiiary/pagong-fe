@@ -282,6 +282,13 @@ export const mockHandlers = {
     });
   },
 
+  allEmployees: async () => {
+    await delay(200);
+    return MOCK_USERS.filter((u) => u.role === "EMPLOYEE").map(
+      ({ password: _, ...u }) => u,
+    );
+  },
+
   projectMembers: async (projectId: number) => {
     await delay(200);
     const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
@@ -302,7 +309,7 @@ export const mockHandlers = {
     };
   },
 
-  updateStaffAssignees: async (projectId: number, staffUserIds: number[]) => {
+  updateMembers: async (projectId: number, memberUserIds: number[]) => {
     await delay(300);
     const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
     if (!project)
@@ -311,15 +318,16 @@ export const mockHandlers = {
         code: "NOT_FOUND",
         message: "프로젝트를 찾을 수 없습니다.",
       };
-    project.memberIds = staffUserIds;
-    const staffAssignees = MOCK_USERS.filter((u) =>
-      staffUserIds.includes(u.id),
-    ).map(({ password: _, ...u }) => ({
-      userId: u.id,
-      name: u.name,
-      email: u.email,
-    }));
-    return { projectId, staffAssignees };
+    project.memberIds = memberUserIds;
+    const members = MOCK_USERS.filter((u) => memberUserIds.includes(u.id)).map(
+      ({ password: _, ...u }) => ({
+        userId: u.id,
+        name: u.name,
+        email: u.email,
+        projectRole: "MEMBER" as const,
+      }),
+    );
+    return { projectId, members };
   },
 
   addProjectMember: async (projectId: number, userId: number) => {

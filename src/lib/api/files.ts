@@ -31,4 +31,25 @@ export const filesApi = {
     setTimeout(() => URL.revokeObjectURL(url), 100);
     return { downloadUrl: url };
   },
+
+  // POST /api/files/{file_id}/share-links
+  createShareLink: async (
+    fileId: number,
+    expiresInDays: number,
+  ): Promise<{
+    token: string;
+    url: string;
+    expiresAt: string;
+    isActive: boolean;
+  }> => {
+    const { data } = await apiClient.post(`/api/files/${fileId}/share-links`, {
+      expiresInDays,
+    });
+    return {
+      token: data.token,
+      url: data.url,
+      expiresAt: data.expiresAt,
+      isActive: data.status === "ACTIVE",
+    };
+  },
 };

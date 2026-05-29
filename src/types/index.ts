@@ -13,13 +13,24 @@ export interface User {
 
 export type ProjectStatus = "ACTIVE" | "CLOSED";
 
+export interface ProjectMember {
+  userId: number;
+  name: string;
+  email: string;
+  projectRole: "MEMBER" | "LEADER";
+}
+
 export interface Project {
   projectId: number;
   name: string;
+  clientId?: number;
   clientName: string;
   status: ProjectStatus;
-  myProjectRole: "MEMBER" | "LEADER";
+  myProjectRole?: "MEMBER" | "LEADER";
   description?: string;
+  createdBy?: number;
+  members?: ProjectMember[];
+  // 목록 API에만 포함될 수 있는 필드
   createdAt?: string;
   updatedAt?: string;
   memberIds?: number[];

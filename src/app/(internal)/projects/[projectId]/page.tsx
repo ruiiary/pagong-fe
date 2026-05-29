@@ -11,6 +11,7 @@ import {
   FileType,
   UserRole,
   User as UserType,
+  ProjectMember,
 } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -303,6 +304,21 @@ const AddMemberLabel = styled.span`
   color: #6b7280;
 `;
 
+const FixedChip = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 500;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #9ca3af;
+  cursor: default;
+  user-select: none;
+`;
+
 const EmployeeChip = styled.button<{ $selected: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -357,6 +373,61 @@ const SaveError = styled.span`
   color: #dc2626;
 `;
 
+const ConfirmList = styled.ul`
+  margin: 12px 0 20px;
+  padding: 0 0 0 18px;
+  font-size: ${fontSize.bodySm};
+  color: #374151;
+  line-height: 1.8;
+`;
+
+const ConfirmActions = styled.div`
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+`;
+
+const ConfirmButton = styled.button<{ $variant?: "secondary" }>`
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 600;
+  cursor: pointer;
+  border: ${({ $variant }) =>
+    $variant === "secondary" ? "1px solid #d1d5db" : "none"};
+  background: ${({ $variant }) =>
+    $variant === "secondary" ? "#fff" : "#2563eb"};
+  color: ${({ $variant }) => ($variant === "secondary" ? "#374151" : "#fff")};
+  &:hover:not(:disabled) {
+    background: ${({ $variant }) =>
+      $variant === "secondary" ? "#f3f4f6" : "#1d4ed8"};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const Toast = styled.div<{ $visible: boolean }>`
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: #166534;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 400;
+  opacity: ${({ $visible }) => ($visible ? 1 : 0)};
+  transform: translateY(${({ $visible }) => ($visible ? "0" : "8px")});
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  pointer-events: none;
+`;
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 type FilterType = "ALL" | FileType;
@@ -390,8 +461,11 @@ export default function ProjectDetailPage({
   const [showShareModal, setShowShareModal] = useState(false);
   const [allEmployees, setAllEmployees] = useState<UserType[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
+  const [savedMemberIds, setSavedMemberIds] = useState<number[]>([]);
   const [memberLoading, setMemberLoading] = useState(false);
   const [memberSaveError, setMemberSaveError] = useState(false);
+  const [showMemberConfirm, setShowMemberConfirm] = useState(false);
+  const [memberSaveSuccess, setMemberSaveSuccess] = useState(false);
 
   useEffect(() => {
     const u = getStoredUser();
@@ -400,11 +474,12 @@ export default function ProjectDetailPage({
       setRole(u.role);
       if (u.role === "MANAGER") {
         service
-          .projectMembers(Number(projectId))
-          .then(({ members: m, nonMembers: nm }) => {
-            setAllEmployees([...m, ...nm]);
-            setSelectedMemberIds(m.map((member) => member.id));
-          });
+          .allEmployees()
+          .then((employees) => {
+            console.log("[allEmployees]", employees);
+            setAllEmployees(employees);
+          })
+          .catch((e) => console.error("[allEmployees error]", e));
       }
     }
   }, [projectId]);
@@ -419,6 +494,13 @@ export default function ProjectDetailPage({
       .then(([p, f]) => {
         setProject(p);
         setFiles(f);
+        if (p.members) {
+          const memberIds = p.members
+            .filter((m) => m.projectRole === "MEMBER")
+            .map((m) => m.userId);
+          setSelectedMemberIds(memberIds);
+          setSavedMemberIds(memberIds);
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -449,11 +531,19 @@ export default function ProjectDetailPage({
     setMemberSaveError(false);
   };
 
+  const isMembersDirty =
+    [...selectedMemberIds].sort().join(",") !==
+    [...savedMemberIds].sort().join(",");
+
   const handleSaveMembers = async () => {
+    setShowMemberConfirm(false);
     setMemberLoading(true);
     setMemberSaveError(false);
     try {
-      await service.updateStaffAssignees(Number(projectId), selectedMemberIds);
+      await service.updateMembers(Number(projectId), selectedMemberIds);
+      setSavedMemberIds([...selectedMemberIds]);
+      setMemberSaveSuccess(true);
+      setTimeout(() => setMemberSaveSuccess(false), 3000);
     } catch {
       setMemberSaveError(true);
     } finally {
@@ -479,10 +569,7 @@ export default function ProjectDetailPage({
       <Header>
         <Title>
           {project.name}
-          <Meta>
-            고객사: {project.clientName} · 생성일{" "}
-            {formatDate(project.createdAt ?? "")}
-          </Meta>
+          <Meta>고객사: {project.clientName}</Meta>
         </Title>
         <UploadButton href={`/files/upload?projectId=${projectId}`}>
           + 파일 업로드
@@ -646,13 +733,77 @@ export default function ProjectDetailPage({
               {memberSaveError && (
                 <SaveError>저장에 실패했습니다. 다시 시도해주세요.</SaveError>
               )}
-              <SaveButton onClick={handleSaveMembers} disabled={memberLoading}>
+              <SaveButton
+                onClick={() => setShowMemberConfirm(true)}
+                disabled={memberLoading || !isMembersDirty}
+              >
                 {memberLoading ? "저장 중..." : "저장"}
               </SaveButton>
             </div>
           </MemberFooter>
         </MemberSection>
       )}
+
+      {showMemberConfirm &&
+        (() => {
+          const added = allEmployees.filter(
+            (u) =>
+              selectedMemberIds.includes(u.id) &&
+              !savedMemberIds.includes(u.id),
+          );
+          const removed = allEmployees.filter(
+            (u) =>
+              !selectedMemberIds.includes(u.id) &&
+              savedMemberIds.includes(u.id),
+          );
+          return (
+            <ModalOverlay onClick={() => setShowMemberConfirm(false)}>
+              <ModalBox onClick={(e) => e.stopPropagation()}>
+                <ModalHeader>
+                  <ModalTitle>담당 사원 변경 확인</ModalTitle>
+                  <ModalCloseButton onClick={() => setShowMemberConfirm(false)}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 18 18"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    >
+                      <line x1="4" y1="4" x2="14" y2="14" />
+                      <line x1="14" y1="4" x2="4" y2="14" />
+                    </svg>
+                  </ModalCloseButton>
+                </ModalHeader>
+                <ConfirmList>
+                  {added.map((u) => (
+                    <li key={u.id}>+ {u.name} 추가</li>
+                  ))}
+                  {removed.map((u) => (
+                    <li key={u.id}>- {u.name} 제거</li>
+                  ))}
+                </ConfirmList>
+                <ConfirmActions>
+                  <ConfirmButton
+                    $variant="secondary"
+                    onClick={() => setShowMemberConfirm(false)}
+                  >
+                    취소
+                  </ConfirmButton>
+                  <ConfirmButton
+                    onClick={handleSaveMembers}
+                    disabled={memberLoading}
+                  >
+                    확인
+                  </ConfirmButton>
+                </ConfirmActions>
+              </ModalBox>
+            </ModalOverlay>
+          );
+        })()}
+
+      <Toast $visible={memberSaveSuccess}>담당 사원이 저장되었습니다.</Toast>
     </>
   );
 }

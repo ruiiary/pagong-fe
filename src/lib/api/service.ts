@@ -11,6 +11,7 @@
 import { authApi } from "./auth";
 import { projectsApi } from "./projects";
 import { filesApi } from "./files";
+import { usersApi } from "./users";
 import { mockHandlers } from "@/lib/mock/handlers";
 import { UserRole, ShareLinkDetail, User } from "@/types";
 
@@ -79,7 +80,9 @@ export const service = {
   // ─── Share Links (API 미수신 → mock 고정) ──────────────────────────────────
 
   createShareLink: (fileId: number, expiresInDays: number, role: UserRole) =>
-    mockHandlers.createShareLink(fileId, expiresInDays, role),
+    USE_REAL_API
+      ? filesApi.createShareLink(fileId, expiresInDays)
+      : mockHandlers.createShareLink(fileId, expiresInDays, role),
 
   shareLinksAll: (userId?: number): Promise<ShareLinkDetail[]> =>
     mockHandlers.shareLinksAll(userId),
@@ -91,10 +94,13 @@ export const service = {
   // ─── Project Members ───────────────────────────────────────────────────────
 
   // GET은 mock 고정 (서버 미제공), PUT은 실제 API 사용
+  allEmployees: () =>
+    USE_REAL_API ? usersApi.list("EMPLOYEE") : mockHandlers.allEmployees(),
+
   projectMembers: (projectId: number) => mockHandlers.projectMembers(projectId),
 
-  updateStaffAssignees: (projectId: number, staffUserIds: number[]) =>
+  updateMembers: (projectId: number, memberUserIds: number[]) =>
     USE_REAL_API
-      ? projectsApi.updateStaffAssignees(projectId, staffUserIds)
-      : mockHandlers.updateStaffAssignees(projectId, staffUserIds),
+      ? projectsApi.updateMembers(projectId, memberUserIds)
+      : mockHandlers.updateMembers(projectId, memberUserIds),
 };
