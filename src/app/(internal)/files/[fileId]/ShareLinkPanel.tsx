@@ -115,6 +115,7 @@ const ErrorMsg = styled.p`
 
 interface ActiveLink {
   token: string;
+  url: string;
   expiresAt: string;
   isActive: boolean;
 }
@@ -134,12 +135,14 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_API_BASE_URL) return;
     const existing = MOCK_SHARE_LINKS.find(
       (l) => l.fileId === fileId && l.isActive,
     );
     if (existing) {
       setActiveLink({
         token: existing.token,
+        url: `${typeof window !== "undefined" ? window.location.origin : ""}/share/${existing.token}`,
         expiresAt: existing.expiresAt,
         isActive: new Date(existing.expiresAt) > new Date(),
       });
@@ -153,6 +156,9 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
       const link = await service.createShareLink(fileId, days, role);
       setActiveLink({
         token: link.token,
+        url:
+          (link as { url?: string }).url ??
+          `${typeof window !== "undefined" ? window.location.origin : ""}/share/${link.token}`,
         expiresAt: link.expiresAt,
         isActive: true,
       });
@@ -166,11 +172,8 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
     }
   };
 
-  const shareUrl = (token: string) =>
-    `${typeof window !== "undefined" ? window.location.origin : ""}/share/${token}`;
-
-  const handleCopy = (token: string) => {
-    navigator.clipboard.writeText(shareUrl(token));
+  const handleCopy = (url: string) => {
+    navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -187,9 +190,9 @@ export function ShareLinkPanel({ fileId, role, inline = false }: Props) {
             <StatusDot $active={activeLink.isActive} />
             {activeLink.isActive ? "활성" : "만료됨"}
           </StatusBadge>
-          <LinkBox>{shareUrl(activeLink.token)}</LinkBox>
+          <LinkBox>{activeLink.url}</LinkBox>
           <ExpireText>만료: {formatDateTime(activeLink.expiresAt)}</ExpireText>
-          <Button onClick={() => handleCopy(activeLink.token)}>
+          <Button onClick={() => handleCopy(activeLink.url)}>
             📋 링크 복사{copied && <CopyConfirm>복사됨!</CopyConfirm>}
           </Button>
           <Button $variant="secondary" onClick={() => setShowCreate(true)}>

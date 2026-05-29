@@ -11,6 +11,7 @@ import {
   FileType,
   UserRole,
   User as UserType,
+  ProjectMember,
 } from "@/types";
 import { Loading } from "@/components/ui/Loading";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -303,6 +304,21 @@ const AddMemberLabel = styled.span`
   color: #6b7280;
 `;
 
+const FixedChip = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: ${fontSize.bodySm};
+  font-weight: 500;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #9ca3af;
+  cursor: default;
+  user-select: none;
+`;
+
 const EmployeeChip = styled.button<{ $selected: boolean }>`
   display: inline-flex;
   align-items: center;
@@ -400,11 +416,9 @@ export default function ProjectDetailPage({
       setRole(u.role);
       if (u.role === "MANAGER") {
         service
-          .projectMembers(Number(projectId))
-          .then(({ members: m, nonMembers: nm }) => {
-            setAllEmployees([...m, ...nm]);
-            setSelectedMemberIds(m.map((member) => member.id));
-          });
+          .allEmployees()
+          .then(setAllEmployees)
+          .catch(() => {});
       }
     }
   }, [projectId]);
@@ -419,6 +433,13 @@ export default function ProjectDetailPage({
       .then(([p, f]) => {
         setProject(p);
         setFiles(f);
+        if (p.members) {
+          setSelectedMemberIds(
+            p.members
+              .filter((m) => m.projectRole === "MEMBER")
+              .map((m) => m.userId),
+          );
+        }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -479,10 +500,7 @@ export default function ProjectDetailPage({
       <Header>
         <Title>
           {project.name}
-          <Meta>
-            고객사: {project.clientName} · 생성일{" "}
-            {formatDate(project.createdAt ?? "")}
-          </Meta>
+          <Meta>고객사: {project.clientName}</Meta>
         </Title>
         <UploadButton href={`/files/upload?projectId=${projectId}`}>
           + 파일 업로드

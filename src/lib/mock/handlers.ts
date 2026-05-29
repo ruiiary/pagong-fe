@@ -282,6 +282,13 @@ export const mockHandlers = {
     });
   },
 
+  allEmployees: async () => {
+    await delay(200);
+    return MOCK_USERS.filter((u) => u.role === "EMPLOYEE").map(
+      ({ password: _, ...u }) => u,
+    );
+  },
+
   projectMembers: async (projectId: number) => {
     await delay(200);
     const project = MOCK_PROJECTS.find((p) => p.projectId === projectId);
