@@ -230,18 +230,20 @@ export default function LoginPage() {
           </SubmitButton>
         </Form>
 
-        <DevHint>
-          <DevHintSummary>개발 테스트 계정 보기</DevHintSummary>
-          {DEV_ACCOUNTS.map((acc) => (
-            <DevAccount
-              key={acc.email}
-              type="button"
-              onClick={() => fillAccount(acc)}
-            >
-              {acc.label} — {acc.email}
-            </DevAccount>
-          ))}
-        </DevHint>
+        {process.env.NODE_ENV === "development" && (
+          <DevHint>
+            <DevHintSummary>개발 테스트 계정 보기</DevHintSummary>
+            {DEV_ACCOUNTS.map((acc) => (
+              <DevAccount
+                key={acc.email}
+                type="button"
+                onClick={() => fillAccount(acc)}
+              >
+                {acc.label} — {acc.email}
+              </DevAccount>
+            ))}
+          </DevHint>
+        )}
       </Card>
     </Page>
   );
