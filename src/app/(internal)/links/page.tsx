@@ -261,7 +261,7 @@ export default function LinksPage() {
                   </Td>
                   <Td>
                     <ProjectLink href={`/projects/${link.projectId}`}>
-                      {link.projectName || `프로젝트 #${link.projectId}`}
+                      {link.projectName}
                     </ProjectLink>
                   </Td>
                   <Td>
