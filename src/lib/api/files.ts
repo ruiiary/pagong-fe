@@ -38,7 +38,8 @@ export const filesApi = {
       shareLinks: {
         shareLinkId: number;
         fileId: number;
-        projectId: number;
+        projectId?: number;
+        projectName: string;
         token: string;
         url: string;
         originalFilename: string;
@@ -53,7 +54,8 @@ export const filesApi = {
     return data.shareLinks.map((l) => ({
       id: l.shareLinkId,
       fileId: l.fileId,
-      projectId: l.projectId,
+      projectId: l.projectId ?? 0,
+      projectName: l.projectName,
       token: l.token,
       url: l.url,
       filename: l.originalFilename,
@@ -63,7 +65,6 @@ export const filesApi = {
       expiresAt: l.expiresAt,
       isActive: l.status === "ACTIVE",
       createdAt: l.createdAt,
-      projectName: "",
     }));
   },
 
