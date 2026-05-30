@@ -157,6 +157,28 @@ const CopiedText = styled.span`
   font-weight: 500;
 `;
 
+const FilterTabs = styled.div`
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+`;
+
+const FilterTab = styled.button<{ $active: boolean }>`
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-size: ${fontSize.body};
+  font-weight: ${({ $active }) => ($active ? "600" : "400")};
+  color: ${({ $active }) => ($active ? "#2563eb" : "#6b7280")};
+  border-bottom: 2px solid
+    ${({ $active }) => ($active ? "#2563eb" : "transparent")};
+  cursor: pointer;
+  margin-bottom: -1px;
+  white-space: nowrap;
+`;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function daysUntil(isoDate: string): number {
@@ -177,6 +199,9 @@ export default function LinksPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [selectedProjectName, setSelectedProjectName] = useState<string | null>(
+    null,
+  );
 
   const currentUser = getStoredUser();
   const isManager = currentUser?.role === "MANAGER";
@@ -204,15 +229,42 @@ export default function LinksPage() {
   if (loading) return <Loading />;
   if (error) return <ErrorState onRetry={load} />;
 
-  const activeLinks = links.filter((l) => l.isActive);
+  const projectNames = Array.from(
+    new Set(links.map((l) => l.projectName).filter(Boolean)),
+  );
+
+  const filtered =
+    selectedProjectName === null
+      ? links
+      : links.filter((l) => l.projectName === selectedProjectName);
+
+  const activeLinks = filtered.filter((l) => l.isActive);
   const expiringLinks = activeLinks.filter((l) => daysUntil(l.expiresAt) <= 2);
-  const expiredLinks = links.filter((l) => !l.isActive);
+  const expiredLinks = filtered.filter((l) => !l.isActive);
 
   return (
     <>
       <Header>
         <PageTitle>{isManager ? "링크 관리" : "프로젝트 공유 링크"}</PageTitle>
       </Header>
+
+      <FilterTabs>
+        <FilterTab
+          $active={selectedProjectName === null}
+          onClick={() => setSelectedProjectName(null)}
+        >
+          전체
+        </FilterTab>
+        {projectNames.map((name) => (
+          <FilterTab
+            key={name}
+            $active={selectedProjectName === name}
+            onClick={() => setSelectedProjectName(name)}
+          >
+            {name}
+          </FilterTab>
+        ))}
+      </FilterTabs>
 
       <SummaryRow>
         <SummaryChip $variant="active">
@@ -233,7 +285,7 @@ export default function LinksPage() {
         )}
       </SummaryRow>
 
-      {links.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState message="생성된 공유 링크가 없습니다." />
       ) : (
         <Table>
@@ -249,7 +301,7 @@ export default function LinksPage() {
             </tr>
           </thead>
           <tbody>
-            {links.map((link) => {
+            {filtered.map((link) => {
               const days = daysUntil(link.expiresAt);
               const urgent = link.isActive && days <= 2;
               return (
