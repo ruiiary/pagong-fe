@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { FileItem } from "@/types";
+import { FileItem, ShareLinkDetail } from "@/types";
 
 export const filesApi = {
   // GET /api/files/{file_id}
@@ -30,6 +30,41 @@ export const filesApi = {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 100);
     return { downloadUrl: url };
+  },
+
+  // GET /api/share-links
+  listShareLinks: async (): Promise<ShareLinkDetail[]> => {
+    const { data } = await apiClient.get<{
+      shareLinks: {
+        shareLinkId: number;
+        fileId: number;
+        projectId: number;
+        token: string;
+        url: string;
+        originalFilename: string;
+        clientName?: string;
+        createdBy: number;
+        creatorName: string;
+        expiresAt: string;
+        status: string;
+        createdAt: string;
+      }[];
+    }>("/api/share-links");
+    return data.shareLinks.map((l) => ({
+      id: l.shareLinkId,
+      fileId: l.fileId,
+      projectId: l.projectId,
+      token: l.token,
+      url: l.url,
+      filename: l.originalFilename,
+      clientName: l.clientName,
+      createdById: l.createdBy,
+      createdByName: l.creatorName,
+      expiresAt: l.expiresAt,
+      isActive: l.status === "ACTIVE",
+      createdAt: l.createdAt,
+      projectName: "",
+    }));
   },
 
   // POST /api/files/{file_id}/share-links

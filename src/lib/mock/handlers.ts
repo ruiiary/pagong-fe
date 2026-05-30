@@ -278,6 +278,7 @@ export const mockHandlers = {
         filename: file.originalFilename,
         projectId: project.projectId,
         projectName: project.name,
+        url: `/share/${link.token}`,
       };
     });
   },
