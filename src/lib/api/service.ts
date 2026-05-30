@@ -85,7 +85,9 @@ export const service = {
       : mockHandlers.createShareLink(fileId, expiresInDays, role),
 
   shareLinksAll: (userId?: number): Promise<ShareLinkDetail[]> =>
-    mockHandlers.shareLinksAll(userId),
+    USE_REAL_API
+      ? filesApi.listShareLinks()
+      : mockHandlers.shareLinksAll(userId),
 
   shareLink: (token: string) => mockHandlers.shareLink(token),
 

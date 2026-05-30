@@ -65,15 +65,17 @@ export interface FileItem {
 export interface ShareLinkDetail {
   id: number;
   fileId: number;
+  projectId: number;
   token: string;
+  url: string;
   expiresAt: string;
   isActive: boolean;
   createdAt: string;
   createdById: number;
   createdByName: string;
   filename: string;
-  projectId: number;
   projectName: string;
+  clientName?: string;
 }
 
 export interface ShareLink {

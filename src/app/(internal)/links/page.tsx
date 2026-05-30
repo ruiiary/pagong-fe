@@ -184,10 +184,8 @@ export default function LinksPage() {
   const load = () => {
     setLoading(true);
     setError(false);
-    // 팀장·임원은 전체 링크, 사원은 배정된 프로젝트 링크만
-    const userId = isManager ? undefined : currentUser?.id;
     service
-      .shareLinksAll(userId)
+      .shareLinksAll()
       .then(setLinks)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -198,7 +196,7 @@ export default function LinksPage() {
   }, []);
 
   const handleCopy = (link: ShareLinkDetail) => {
-    navigator.clipboard.writeText(shareUrl(link.token));
+    navigator.clipboard.writeText(link.url || shareUrl(link.token));
     setCopiedId(link.id);
     setTimeout(() => setCopiedId(null), 2000);
   };
@@ -263,7 +261,7 @@ export default function LinksPage() {
                   </Td>
                   <Td>
                     <ProjectLink href={`/projects/${link.projectId}`}>
-                      {link.projectName}
+                      {link.projectName || `프로젝트 #${link.projectId}`}
                     </ProjectLink>
                   </Td>
                   <Td>
